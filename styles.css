@@ -1,7 +1,6 @@
 body {
   font-family: Arial, sans-serif;
   margin: 0;
-  text-align: center;
 }
 
 .header {
@@ -24,10 +23,6 @@ body {
 
 .hero h2 {
   font-size: 28px;
-}
-
-.hero p {
-  color: #555;
 }
 
 .btn {
@@ -174,4 +169,11 @@ p {
 
 .hero p {
   color: #eee;
+}
+
+.hero,
+.cta,
+footer,
+section h2 {
+  text-align: center;
 }
