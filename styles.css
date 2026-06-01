@@ -6,12 +6,14 @@ body {
 .header {
   background: #111;
   color: white;
-  padding: 10px 20px;
+  padding: 18px 40px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   position: sticky;
   top: 0;
+  z-index: 1000;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.2);
 }
 
 .hero {
@@ -257,4 +259,64 @@ section h2 {
   border-radius:10px;
   box-shadow:0 5px 15px rgba(0,0,0,0.1);
   font-weight:bold;
+}
+
+.menu-semanal{
+  padding:50px 20px;
+}
+
+.dia{
+  background:white;
+  margin:15px auto;
+  max-width:500px;
+  padding:20px;
+  border-radius:10px;
+  box-shadow:0 5px 15px rgba(0,0,0,0.1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+nav {
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-weight: bold;
+  transition: 0.3s;
+  padding-bottom: 4px;
+}
+
+nav a:hover {
+  color: #e60023;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 32px;
+  letter-spacing: 1px;
+}
+
+.menu-semanal {
+  padding: 60px 20px;
+  background: #f8f8f8;
+}
+
+.menu-semanal h2 {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.dia {
+  background: white;
+  max-width: 300px;
+  margin: 15px auto;
+  padding: 20px;
+  border-radius: 12px;
+  box-shadow: 0 5px 15px rgba(0,0,0,0.08);
 }

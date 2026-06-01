@@ -1,29 +1,4 @@
 <!DOCTYPE html>
-<section class="contacto">
-  <h2>📍 Encontranos</h2>
-  <p>AV Yrigoyen 679</p>
-  <p>📞 03493 436619</p>
-  <p>
-    🕒 Lunes a Viernes
-  </p>
-  <p>
-    10:30 a 13:00 hs
-  </p>
-  <p>
-    🕒 Martes a Domingo
-  </p>
-  <p>
-    19:30 a 00:00 hs
-  </p>
-
-  <a
-    href="https://maps.app.goo.gl/7EkZQ6X7GGFtiHz97"
-    target="_blank"
-    class="btn"
-  >
-    Ver ubicación
-  </a>
-</section>
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -35,17 +10,20 @@
 
 <header class="header">
   <h1>Los Hermanos</h1>
-  <div>
-    <a href="tel:03493436619">📞 Llamar</a>
-    <a href="https://wa.me/5493493436619?text=Hola,%20quiero%20hacer%20un%20pedido%20de%20">💬 WhatsApp</a>
-  </div>
+  <nav>
+    <a href="#home">Home</a>
+    <a href="#productos">Productos</a>
+    <a href="#pedido">Tu pedido</a>
+    <a href="#calificaciones">Opiniones</a>
+    <a href="#encontranos">Encontranos</a>
+  </nav>
 </header>
 
 <div class="frase">
   🔥 Más de 10 años acompañando a las familias de Sunchales
 </div>
 
-<section class="hero">
+<section id="home" class="hero">
   <h2>Comida casera en Sunchales, lista para hoy</h2>
   <p>Empanadas, pollo al asador y sándwiches recién hechos. Pedí fácil por WhatsApp o llamanos.</p>
   <a href="https://wa.me/5493493436619?text=Hola,%20quiero%20hacer%20un%20pedido%20de%20" class="btn">Pedir por WhatsApp</a>
@@ -63,13 +41,12 @@
   </div>
 </section>
 
-<section class="productos">
+<section id="productos" class="productos">
   <h2>Nuestros clásicos</h2>
   <div id="productos-container"></div>
 </section>
 
 <section class="menu-semanal">
-
 <h2>Menú de la semana</h2>
 <div class="dia">
   <strong>Lunes</strong>
@@ -93,7 +70,7 @@
 </div>
 </section>
 
-<section class="carrito">
+<section id="pedido" class="carrito">
   <h2>🛒 Tu pedido</h2>
   <div id="carrito-container"> </div>
   <button id="enviar-whatsapp" class="btn">
@@ -106,27 +83,7 @@
   <a href="https://wa.me/5493493436619?text=Hola,%20quiero%20hacer%20un%20pedido%20de%20" class="btn">Pedir por WhatsApp</a>
 </section>
 
-<footer>
-  <h3>Los Hermanos</h3>
-  <p>
-    Rotisería y sandwichería en Sunchales
-  </p>
-  <p>
-    Tel: 03493 436619
-  </p>
-  <p>
-    © 2026 Todos los derechos reservados
-  </p>
-</footer>
-
-<script src="data/productos.js"></script>
-<script src="script.js"></script>
-
-<a href="https://wa.me/5493493436619" class="whatsapp-float">
-  💬 Pedir
-</a>
-
-<section class="reviews">
+<section id="calificaciones" class="reviews">
   <h2>Lo que dicen nuestros clientes</h2>
 
   <div class="review">
@@ -157,6 +114,52 @@
 <p class="urgencia">
 Alta demanda los fines de semana. Pedí con tiempo.
 </p>
+
+<section id="encontranos" class="contacto">
+  <h2>📍 Encontranos</h2>
+  <p>AV Yrigoyen 679</p>
+  <p>📞 03493 436619</p>
+  <p>
+    🕒 Lunes a Viernes
+  </p>
+  <p>
+    10:30 a 13:00 hs
+  </p>
+  <p>
+    🕒 Martes a Domingo
+  </p>
+  <p>
+    19:30 a 00:00 hs
+  </p>
+
+  <a
+    href="https://maps.app.goo.gl/7EkZQ6X7GGFtiHz97"
+    target="_blank"
+    class="btn"
+  >
+    Ver ubicación
+  </a>
+</section>
+
+<footer>
+  <h3>Los Hermanos</h3>
+  <p>
+    Rotisería y sandwichería en Sunchales
+  </p>
+  <p>
+    Tel: 03493 436619
+  </p>
+  <p>
+    © 2026 Todos los derechos reservados
+  </p>
+</footer>
+
+<script src="data/productos.js"></script>
+<script src="script.js"></script>
+
+<a href="https://wa.me/5493493436619" class="whatsapp-float">
+  💬 Pedir
+</a>
 
 </body>
 </html>
