@@ -7,7 +7,11 @@
     "build": "vite build",
     "dev": "vite",
     "typecheck": "tsc --noEmit",
-    "lint:css": "stylelint \"src/**/*.css\""
+    "lint:css": "stylelint \"src/**/*.css\"",
+    "server:install": "npm install --prefix server",
+    "server:dev": "npm run dev --prefix server",
+    "server:build": "npm run build --prefix server",
+    "server:typecheck": "npm run typecheck --prefix server"
   },
   "dependencies": {
     "@radix-ui/react-accordion": "1.2.3",

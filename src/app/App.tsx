@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ShoppingCart, Search, Clock, CheckCircle, Package, Plus, Minus,
   Trash2, Phone, User, LayoutDashboard, ClipboardList, PlusCircle,
   ChefHat, BarChart3, Tag, Edit, Eye, EyeOff, Check, Calendar,
   TrendingUp, ShoppingBag, Flame, X, AlertCircle, RefreshCw,
-  MessageCircle, Ban,
+  MessageCircle, Ban, Plug,
 } from "lucide-react";
+import { api } from "./lib/api";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1520,6 +1521,131 @@ function AdminCategories() {
   );
 }
 
+// ─── Admin: Integrations ────────────────────────────────────────────────────────
+
+type IntegrationCardStatus = "loading" | "ok" | "off" | "error";
+
+function IntegrationBadge({ status }: { status: IntegrationCardStatus }) {
+  const cfg: Record<IntegrationCardStatus, { text: string; cls: string }> = {
+    loading: { text: "Verificando…",   cls: "bg-gray-50 border-gray-200 text-gray-600" },
+    ok:      { text: "Conectado",      cls: "bg-green-50 border-green-300 text-green-700" },
+    off:     { text: "No configurado", cls: "bg-amber-50 border-amber-300 text-amber-700" },
+    error:   { text: "Error",          cls: "bg-red-50 border-red-300 text-red-700" },
+  };
+  const { text, cls } = cfg[status];
+  return <span className={`text-xs font-medium border px-2.5 py-1 rounded-full shrink-0 ${cls}`}>{text}</span>;
+}
+
+function AdminIntegrations() {
+  const [fudo, setFudo] = useState<{ status: IntegrationCardStatus; error: string | null; lastSync: string | null }>(
+    { status: "loading", error: null, lastSync: null }
+  );
+  const [whatsapp, setWhatsapp] = useState<{ status: IntegrationCardStatus; error: string | null }>(
+    { status: "loading", error: null }
+  );
+  const [syncing, setSyncing] = useState(false);
+  const [syncMsg, setSyncMsg] = useState<string | null>(null);
+
+  const refresh = () => {
+    setFudo(s => ({ ...s, status: "loading" }));
+    setWhatsapp(s => ({ ...s, status: "loading" }));
+    api.fudoStatus()
+      .then(r => setFudo({ status: r.configured ? "ok" : "off", error: null, lastSync: r.lastSync ?? null }))
+      .catch(e => setFudo({ status: "error", error: e instanceof Error ? e.message : "Error desconocido", lastSync: null }));
+    api.whatsappStatus()
+      .then(r => setWhatsapp({ status: r.configured ? "ok" : "off", error: null }))
+      .catch(e => setWhatsapp({ status: "error", error: e instanceof Error ? e.message : "Error desconocido" }));
+  };
+
+  useEffect(refresh, []);
+
+  const handleSync = async () => {
+    setSyncing(true);
+    setSyncMsg(null);
+    try {
+      const r = await api.fudoSync();
+      setSyncMsg(`Se sincronizaron ${r.synced} productos.`);
+      refresh();
+    } catch (e) {
+      setSyncMsg(e instanceof Error ? e.message : "Error al sincronizar");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
+  return (
+    <div className="max-w-4xl mx-auto px-6 py-8">
+      <div className="mb-8">
+        <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-1">Configuración</p>
+        <h1 className="font-display text-4xl font-bold">Integraciones</h1>
+        <p className="text-muted-foreground mt-1 text-sm max-w-2xl">
+          Conectá este sistema con FUDO y con el agente de WhatsApp. Las credenciales se cargan del lado del
+          servidor (archivo <code className="font-mono text-xs bg-muted px-1 py-0.5 rounded">server/.env</code>),
+          nunca acá.
+        </p>
+      </div>
+
+      <div className="space-y-5">
+        {/* FUDO */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="font-semibold text-lg">FUDO</h3>
+            <IntegrationBadge status={fudo.status} />
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Trae el catálogo de productos y precios desde FUDO hacia este sistema.
+          </p>
+          <div className="text-xs text-muted-foreground mb-4 space-y-1">
+            {fudo.lastSync && <p>Última sincronización: {new Date(fudo.lastSync).toLocaleString("es-AR")}</p>}
+            {fudo.error && <p className="text-red-600">{fudo.error}</p>}
+            {syncMsg && <p className="text-foreground">{syncMsg}</p>}
+            {fudo.status === "off" && (
+              <p>
+                Completá <code className="font-mono bg-muted px-1 py-0.5 rounded">FUDO_API_URL</code> y{" "}
+                <code className="font-mono bg-muted px-1 py-0.5 rounded">FUDO_API_KEY</code> en{" "}
+                <code className="font-mono bg-muted px-1 py-0.5 rounded">server/.env</code> para activar esta integración.
+              </p>
+            )}
+          </div>
+          <button onClick={handleSync} disabled={fudo.status !== "ok" || syncing}
+            className="text-sm bg-primary/10 text-primary px-4 py-2 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors font-semibold disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-2">
+            <RefreshCw size={14} className={syncing ? "animate-spin" : ""} />
+            {syncing ? "Sincronizando…" : "Sincronizar productos ahora"}
+          </button>
+        </div>
+
+        {/* WhatsApp */}
+        <div className="bg-card border border-border rounded-2xl p-5">
+          <div className="flex items-start justify-between gap-3 mb-2">
+            <h3 className="font-semibold text-lg">Agente de WhatsApp</h3>
+            <IntegrationBadge status={whatsapp.status} />
+          </div>
+          <p className="text-sm text-muted-foreground mb-4">
+            Conecta este sistema con el agente de WhatsApp (Twilio) para recibir pedidos y enviar avisos de estado.
+          </p>
+          <div className="text-xs text-muted-foreground mb-4 space-y-1">
+            {whatsapp.error && <p className="text-red-600">{whatsapp.error}</p>}
+            <p>
+              El agente debe enviar los eventos entrantes a{" "}
+              <code className="font-mono bg-muted px-1 py-0.5 rounded">POST /api/whatsapp/webhook</code> de este servidor.
+            </p>
+            {whatsapp.status === "off" && (
+              <p>
+                Completá <code className="font-mono bg-muted px-1 py-0.5 rounded">WHATSAPP_AGENT_URL</code> en{" "}
+                <code className="font-mono bg-muted px-1 py-0.5 rounded">server/.env</code> para activar esta integración.
+              </p>
+            )}
+          </div>
+          <button onClick={refresh}
+            className="text-sm bg-primary/10 text-primary px-4 py-2 rounded-lg hover:bg-primary hover:text-primary-foreground transition-colors font-semibold flex items-center gap-2">
+            <RefreshCw size={14} /> Actualizar estado
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Main App ──────────────────────────────────────────────────────────────────
 
 type Role = "cliente" | "recepcionista" | "cocina" | "admin";
@@ -1679,9 +1805,10 @@ export default function App() {
           <nav className="bg-card border-b border-border">
             <div className="max-w-7xl mx-auto px-4 flex">
               {[
-                { k: "dashboard",  l: "Dashboard",  I: BarChart3   },
-                { k: "products",   l: "Productos",  I: ShoppingBag },
-                { k: "categories", l: "Categorías", I: Tag         },
+                { k: "dashboard",     l: "Dashboard",     I: BarChart3   },
+                { k: "products",      l: "Productos",      I: ShoppingBag },
+                { k: "categories",    l: "Categorías",     I: Tag         },
+                { k: "integraciones", l: "Integraciones",  I: Plug        },
               ].map(v => (
                 <button key={v.k} onClick={() => setStaffView(v.k)}
                   className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${staffView === v.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
@@ -1690,9 +1817,10 @@ export default function App() {
               ))}
             </div>
           </nav>
-          {staffView === "dashboard"  && <AdminDashboard orders={orders} />}
-          {staffView === "products"   && <AdminProducts />}
-          {staffView === "categories" && <AdminCategories />}
+          {staffView === "dashboard"     && <AdminDashboard orders={orders} />}
+          {staffView === "products"      && <AdminProducts />}
+          {staffView === "categories"    && <AdminCategories />}
+          {staffView === "integraciones" && <AdminIntegrations />}
         </>
       )}
     </div>
