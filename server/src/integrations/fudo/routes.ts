@@ -1,19 +1,28 @@
 import { Router } from "express";
+import { db } from "../../db.js";
 import { isFudoConfigured } from "../../config.js";
-import { productStore } from "../../store.js";
 import { fetchFudoProducts, FudoNotConfiguredError } from "./client.js";
 
 export const fudoRouter = Router();
 
-fudoRouter.get("/status", (_req, res) => {
-  res.json({ configured: isFudoConfigured(), lastSync: productStore.get()?.syncedAt ?? null });
+fudoRouter.get("/status", async (_req, res) => {
+  const lastSynced = await db.fudoProduct.aggregate({ _max: { updatedAt: true } });
+  res.json({ configured: isFudoConfigured(), lastSync: lastSynced._max.updatedAt ?? null });
 });
 
 fudoRouter.post("/sync", async (_req, res) => {
   try {
     const products = await fetchFudoProducts();
-    const saved = productStore.save(products);
-    res.json({ synced: products.length, syncedAt: saved.syncedAt });
+    await db.$transaction(
+      products.map(p =>
+        db.fudoProduct.upsert({
+          where: { externalId: p.externalId },
+          create: p,
+          update: { name: p.name, price: p.price, category: p.category, active: p.active },
+        })
+      )
+    );
+    res.json({ synced: products.length, syncedAt: new Date().toISOString() });
   } catch (err) {
     if (err instanceof FudoNotConfiguredError) {
       res.status(400).json({ error: err.message });
@@ -23,6 +32,7 @@ fudoRouter.post("/sync", async (_req, res) => {
   }
 });
 
-fudoRouter.get("/products", (_req, res) => {
-  res.json(productStore.get() ?? { syncedAt: null, products: [] });
+fudoRouter.get("/products", async (_req, res) => {
+  const products = await db.fudoProduct.findMany({ orderBy: { name: "asc" } });
+  res.json(products.map(p => ({ ...p, price: Number(p.price) })));
 });

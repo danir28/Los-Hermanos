@@ -20,8 +20,11 @@ Backend (`server/`):
 - `npm run dev` — start the API with hot reload (http://localhost:4000)
 - `npm run build` / `npm run start` — compile to `dist/` and run it
 - `npm run typecheck` — `tsc --noEmit`
+- `npm run db:migrate` — create/apply a Prisma migration from `prisma/schema.prisma` (needs `DATABASE_URL` in `server/.env`)
+- `npm run db:generate` — regenerate the Prisma Client into `src/generated/prisma` (also runs automatically after `db:migrate`)
+- `npm run db:studio` — open Prisma Studio (GUI to browse/edit the DB)
 
-There is no test suite and no JS/TS linter configured in either package — only `typecheck` and `lint:css` are available as checks. Both dev servers need to run simultaneously (in separate terminals) for the frontend to talk to the backend.
+There is no test suite and no JS/TS linter configured in either package — only `typecheck` and `lint:css` are available as checks. Both dev servers need to run simultaneously (in separate terminals) for the frontend to talk to the backend, and Postgres needs to be running for the backend to start correctly.
 
 ## Architecture
 
@@ -55,14 +58,33 @@ Other files:
 Separate Express + TypeScript app, not part of the Vite build, run independently (`server/package.json`, own `tsconfig.json`). It exists because integrating FUDO and the WhatsApp agent both require holding API keys and (for WhatsApp) receiving inbound webhooks — neither is safe to do from the browser. Config/secrets live in `server/.env` (see `server/.env.example`), never in frontend code.
 
 - `src/config.ts` — reads env vars, exposes `isFudoConfigured()` / `isWhatsappConfigured()`
-- `src/store.ts` — in-memory cache of the last FUDO sync; **not persisted**, resets on restart. Replace with a real DB when one is introduced.
-- `src/integrations/fudo/` — `types.ts` (provisional shape, no FUDO API docs yet), `client.ts` (`fetchFudoProducts()`, throws `FudoNotConfiguredError` when unset), `routes.ts` (`GET /status`, `POST /sync`, `GET /products`)
-- `src/integrations/whatsapp/` — talks to the WhatsApp **agent's** API (the agent owns the Twilio connection), not Twilio directly. `client.ts` (`sendWhatsappMessage()`), `routes.ts` (`GET /status`, `POST /webhook` — the agent calls this when a message/order comes in, `POST /notify` — this system asks the agent to send a message)
-- `src/index.ts` — Express app, mounts `/api/fudo` and `/api/whatsapp`, plus `GET /api/health`
+- `src/db.ts` — exports the singleton `db` (Prisma Client), constructed with the `@prisma/adapter-pg` driver adapter (Prisma 7 requires an explicit adapter — there's no built-in query engine binary anymore; the connection string comes from `DATABASE_URL`)
+- `src/integrations/fudo/` — `types.ts` (provisional shape, no FUDO API docs yet), `client.ts` (`fetchFudoProducts()`, throws `FudoNotConfiguredError` when unset), `routes.ts` (`GET /status`, `POST /sync` upserts into the `FudoProduct` table, `GET /products`)
+- `src/integrations/whatsapp/` — talks to the WhatsApp **agent's** API (the agent owns the Twilio connection), not Twilio directly. `client.ts` (`sendWhatsappMessage()`), `routes.ts` (`GET /status`, `POST /webhook` — the agent calls this when a message/order comes in, persisted as-is into `WhatsappInboundEvent`; `POST /notify` — this system asks the agent to send a message, logged into `WhatsappOutboundMessage` whether it succeeds or fails)
+- `src/index.ts` — Express app, mounts `/api/fudo` and `/api/whatsapp`, plus `GET /api/health`; disconnects Prisma on `SIGINT`/`SIGTERM`
 
 Both integrations are **scaffolded but not connected to real accounts** — no FUDO API docs and no finalized contract with the WhatsApp agent yet. Endpoints return a clear 400 error ("no configurado") instead of calling out, so the rest of the system stays usable without credentials. When wiring in real ones: update `server/.env`, and for FUDO adjust the field mapping in `fudo/client.ts`'s `mapProduct()` once the real response shape is known; for WhatsApp adjust the payload shape in `whatsapp/routes.ts`'s `/webhook` handler once the agent's contract is defined.
 
 The frontend's `AdminIntegrations` component (Admin → Integraciones tab) surfaces connection status and lets staff trigger a FUDO sync — it never handles secrets itself, only calls the backend.
+
+### Database (Postgres + Prisma)
+
+Local Postgres 18 (installed via the EDB macOS installer, `/Library/PostgreSQL/18`), accessed through a dedicated `los_hermanos_app` role/database — never through the `postgres` superuser. Schema lives in `server/prisma/schema.prisma`; migrations in `server/prisma/migrations/` (committed to git, generated code in `server/src/generated/prisma` is not).
+
+Prisma 7 config split: `server/prisma.config.ts` holds `DATABASE_URL` for the CLI (`migrate`/`studio`), while `PrismaClient` at runtime needs an explicit `adapter` (see `src/db.ts`) — this is new in Prisma 7 and easy to get wrong if copying older Prisma examples from memory.
+
+Current tables (intentionally scoped to what the integrations need — **not yet the app's core domain**):
+- `FudoProduct` (`fudo_products`) — latest known FUDO catalog snapshot, upserted by `externalId` on every sync, no history kept
+- `WhatsappInboundEvent` (`whatsapp_inbound_events`) — raw events the WhatsApp agent posts to the webhook, unprocessed
+- `WhatsappOutboundMessage` (`whatsapp_outbound_messages`) — audit log of every notify attempt (success or failure)
+
+`npx prisma migrate dev` requires the app role to have `CREATEDB` (Postgres needs it to spin up a throwaway shadow database for diffing) — this was granted once manually via `ALTER ROLE los_hermanos_app CREATEDB;`, run as the `postgres` superuser through pgAdmin.
+
+### Domain model — not yet built
+
+`server/` currently only has tables for the FUDO/WhatsApp integrations. The app's actual business data (products, categories, orders, order items, business hours, internal users) is **still hardcoded in `App.tsx`** and not backed by the database yet — that's a deliberately separate, larger piece of work (new Prisma models + CRUD endpoints + migrating `App.tsx` off local `useState`/hardcoded arrays).
+
+The client provided a requirements document (products/categories catalog, cart-based ordering, order lifecycle status tracking, receptionist/kitchen/admin roles, WhatsApp order intake) that should inform that schema when it's tackled. One gap worth flagging: RNF-01 requires hashed passwords for internal users, but there is currently **no authentication system at all** — the four roles in the UI (`cliente`/`recepcionista`/`cocina`/`admin`) are just tabs anyone can click, with no login. A `users` table + auth flow is in scope per the requirements but not yet designed or built.
 
 ## Build/tooling notes
 

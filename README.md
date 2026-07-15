@@ -12,12 +12,37 @@
   ## Backend / integraciones (FUDO, WhatsApp)
 
   Hay un backend separado en `server/` que maneja las integraciones con FUDO
-  y con el agente de WhatsApp (Twilio). Para levantarlo:
+  y con el agente de WhatsApp (Twilio), respaldado por una base PostgreSQL.
+
+  ### Base de datos (una sola vez)
+
+  Necesitás Postgres corriendo localmente y un rol/base dedicados para la
+  app (no uses el superusuario `postgres` directo). Con pgAdmin (o `psql`),
+  conectado como `postgres`, corré estas dos sentencias **una por vez**
+  (`CREATE DATABASE` no puede ir junto con otra sentencia):
+
+  ```sql
+  CREATE ROLE los_hermanos_app WITH LOGIN PASSWORD 'ELEGI_UNA_CONTRASEÑA';
+  ```
+  ```sql
+  CREATE DATABASE los_hermanos OWNER los_hermanos_app;
+  ```
+  ```sql
+  ALTER ROLE los_hermanos_app CREATEDB;
+  ```
+
+  (El último permiso lo necesita Prisma Migrate para crear una base
+  temporal de comparación al generar migraciones.)
+
+  ### Levantar el backend
 
   ```
   cd server
-  cp .env.example .env   # completar credenciales cuando estén disponibles
+  cp .env.example .env
+  # completar DATABASE_URL en .env con la contraseña que elegiste arriba,
+  # y las credenciales de FUDO/WhatsApp cuando estén disponibles
   npm i
+  npm run db:migrate   # crea las tablas
   npm run dev
   ```
 

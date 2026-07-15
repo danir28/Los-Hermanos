@@ -1,0 +1,48 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Último catálogo conocido sincronizado desde FUDO. Se sobrescribe (upsert
+// por externalId) en cada POST /api/fudo/sync — no guarda historial.
+model FudoProduct {
+  id         String   @id @default(uuid())
+  externalId String   @unique
+  name       String
+  price      Decimal  @db.Decimal(10, 2)
+  category   String
+  active     Boolean  @default(true)
+  updatedAt  DateTime @updatedAt
+
+  @@map("fudo_products")
+}
+
+// Eventos entrantes que el agente de WhatsApp envía a POST /api/whatsapp/webhook.
+// Se guardan tal cual llegan (sin procesar todavía) para no perder pedidos
+// si falla la comunicación con el agente (ver Riesgo 7 del documento de alcance).
+model WhatsappInboundEvent {
+  id         String   @id @default(uuid())
+  type       String
+  from       String
+  payload    Json
+  receivedAt DateTime @default(now())
+
+  @@map("whatsapp_inbound_events")
+}
+
+// Registro de los mensajes que este sistema le pidió al agente que envíe
+// (POST /api/whatsapp/notify), para poder auditar qué se le avisó a cada cliente.
+model WhatsappOutboundMessage {
+  id      String   @id @default(uuid())
+  to      String
+  message String
+  success Boolean
+  error   String?
+  sentAt  DateTime @default(now())
+
+  @@map("whatsapp_outbound_messages")
+}
