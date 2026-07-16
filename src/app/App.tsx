@@ -3,7 +3,7 @@ import {
   ShoppingCart, Clock, LayoutDashboard, ClipboardList, PlusCircle,
   ChefHat, BarChart3, Tag, ShoppingBag, Plug,
 } from "lucide-react";
-import type { CartItem, Order, OrderStatus, Product } from "./types";
+import type { CartItem, Order, OrderStatus, OrderType, Product } from "./types";
 import { SAMPLE_ORDERS } from "./data/sampleOrders";
 import { CustomerHome, CustomerMenu, CustomerCart, CustomerConfirmation, CustomerTracking } from "./cliente";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
@@ -34,21 +34,36 @@ export default function App() {
     prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
   );
 
-  const confirmOrder = (name: string, phone: string) => {
+  // Arma un pedido nuevo a partir de sus datos básicos y lo agrega al estado compartido de orders,
+  // para que aparezca en recepción, cocina y admin. Devuelve el pedido creado (con su id asignado).
+  const createOrder = (input: { customer: string; phone: string; items: CartItem[]; type: OrderType }): Order => {
     const newOrder: Order = {
       id: String(orders.length + 1).padStart(3, "0"),
-      customer: name, phone,
-      items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+      customer: input.customer,
+      phone: input.phone,
+      items: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
       status: "Pendiente",
       createdAt: new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }),
       estimatedTime: null,
-      total: cart.reduce((s, i) => s + i.price * i.qty, 0),
-      type: "online",
+      total: input.items.reduce((s, i) => s + i.price * i.qty, 0),
+      type: input.type,
     };
     setOrders(prev => [newOrder, ...prev]);
+    return newOrder;
+  };
+
+  const confirmOrder = (name: string, phone: string) => {
+    const newOrder = createOrder({ customer: name, phone, items: cart, type: "online" });
     setConfirmedId(newOrder.id);
     setCart([]);
     setCustomerView("confirmation");
+  };
+
+  // Pedido cargado manualmente por recepción (presencial, telefónico o whatsapp): se agrega a
+  // orders igual que uno online, y después vuelve al dashboard de recepción.
+  const createReceptionistOrder = (input: { customer: string; phone: string; items: CartItem[]; type: OrderType }) => {
+    createOrder(input);
+    setStaffView("dashboard");
   };
 
   const updateStatus = (id: string, status: OrderStatus) =>
@@ -141,9 +156,9 @@ export default function App() {
       {role === "recepcionista" && (
         <>
           <RoleNavTabs tabs={RECEPTIONIST_TABS} active={staffView} onSelect={setStaffView} />
-          {staffView === "dashboard" && <ReceptionistDashboard orders={orders} onNavigate={setStaffView} />}
-          {staffView === "orders"    && <ReceptionistOrders orders={orders} />}
-          {staffView === "create"    && <ReceptionistCreateOrder onConfirm={() => setStaffView("dashboard")} />}
+          {staffView === "dashboard" && <ReceptionistDashboard orders={orders} onNavigate={setStaffView} onUpdateStatus={updateStatus} />}
+          {staffView === "orders"    && <ReceptionistOrders orders={orders} onUpdateStatus={updateStatus} />}
+          {staffView === "create"    && <ReceptionistCreateOrder onConfirm={createReceptionistOrder} />}
         </>
       )}
 

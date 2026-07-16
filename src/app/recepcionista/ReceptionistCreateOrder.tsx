@@ -1,15 +1,19 @@
 import { useState } from "react";
 import { Search, CheckCircle, Plus, Minus, X } from "lucide-react";
-import type { CartItem, Product } from "../types";
+import type { CartItem, OrderType, Product } from "../types";
 import { PRODUCTS, CATEGORIES } from "../data/products";
 import { formatCurrency } from "../lib/format";
+import { ConfirmDialog } from "../components/shared";
+
+// Datos del pedido que arma este formulario, para que App.tsx lo cree en el estado compartido de orders.
+type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; type: OrderType };
 
 // Formulario de carga manual de pedidos por parte de recepción (pedidos telefónicos o presenciales).
-export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: () => void }) {
+export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewReceptionistOrder) => void }) {
   const [orderCart, setOrderCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [orderType, setOrderType] = useState<"presencial" | "telefónico" | "whatsapp">("presencial");
+  const [orderType, setOrderType] = useState<"presencial" | "telefónico">("presencial");
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todos");
   const [confirmed, setConfirmed] = useState(false);
@@ -37,17 +41,19 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: () => void }
   const handleConfirm = () => {
     if (!orderCart.length || !name || !phone) return;
     setConfirmed(true);
-    setTimeout(() => { setConfirmed(false); onConfirm(); }, 1200);
+    setTimeout(() => {
+      setConfirmed(false);
+      onConfirm({ customer: name, phone, items: orderCart, type: orderType });
+    }, 1200);
   };
 
   const handleCancel = () => {
     setOrderCart([]); setName(""); setPhone(""); setShowCancelConfirm(false);
   };
 
-  const CHANNEL_OPTIONS: { key: "presencial" | "telefónico" | "whatsapp"; label: string; emoji: string }[] = [
+  const CHANNEL_OPTIONS: { key: "presencial" | "telefónico"; label: string; emoji: string }[] = [
     { key: "presencial",  label: "Presencial",  emoji: "🏠" },
     { key: "telefónico",  label: "Telefónico",  emoji: "📞" },
-    { key: "whatsapp",    label: "WhatsApp",    emoji: "💬" },
   ];
 
   return (
@@ -64,22 +70,13 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: () => void }
 
       {/* Cancel confirm dialog */}
       {showCancelConfirm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-card border border-border rounded-2xl p-6 max-w-sm mx-4 shadow-2xl">
-            <h2 className="font-display font-bold text-xl mb-2">¿Cancelar pedido?</h2>
-            <p className="text-muted-foreground text-sm mb-5">Se perderán todos los datos ingresados hasta ahora.</p>
-            <div className="grid grid-cols-2 gap-3">
-              <button onClick={() => setShowCancelConfirm(false)}
-                className="py-2.5 rounded-xl border border-border font-semibold text-sm hover:bg-secondary transition-colors">
-                Volver
-              </button>
-              <button onClick={handleCancel}
-                className="py-2.5 rounded-xl bg-destructive text-white font-semibold text-sm hover:bg-destructive/90 transition-colors">
-                Sí, cancelar
-              </button>
-            </div>
-          </div>
-        </div>
+        <ConfirmDialog
+          title="¿Cancelar pedido?"
+          description="Se perderán todos los datos ingresados hasta ahora."
+          confirmLabel="Sí, cancelar"
+          onCancel={() => setShowCancelConfirm(false)}
+          onConfirm={handleCancel}
+        />
       )}
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">

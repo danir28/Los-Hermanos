@@ -10,3 +10,6 @@ export const STATUS: Record<OrderStatus, StatusCfg> = {
   "Entregado":          { dot: "bg-gray-400",   badge: "bg-gray-50 border-gray-200 text-gray-600",      label: "Entregado",          Icon: Package      },
   "Cancelado":          { dot: "bg-red-400",    badge: "bg-red-50 border-red-300 text-red-700",         label: "Cancelado",          Icon: Ban          },
 };
+
+// Estados desde los que todavía se puede cancelar un pedido (usado por cocina y recepción).
+export const CAN_CANCEL: OrderStatus[] = ["Pendiente", "Programado"];

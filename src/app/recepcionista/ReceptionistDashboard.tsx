@@ -1,10 +1,10 @@
 import { Clock, CheckCircle, Package, Phone, PlusCircle, Calendar } from "lucide-react";
-import type { Order } from "../types";
+import type { Order, OrderStatus } from "../types";
 import { formatCurrency } from "../lib/format";
 import { TypePill } from "../components/shared";
 
 // Dashboard de recepción: métricas rápidas y accesos directos a los pedidos más urgentes.
-export function ReceptionistDashboard({ orders, onNavigate }: { orders: Order[]; onNavigate: (v: string) => void }) {
+export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { orders: Order[]; onNavigate: (v: string) => void; onUpdateStatus: (id: string, status: OrderStatus) => void }) {
   const pending    = orders.filter(o => o.status === "Pendiente");
   const programmed = orders.filter(o => o.status === "Programado");
   const ready      = orders.filter(o => o.status === "Listo para retirar");
@@ -81,7 +81,8 @@ export function ReceptionistDashboard({ orders, onNavigate }: { orders: Order[];
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-semibold text-green-700">Retiro: {order.estimatedTime} hs</p>
-              <button className="mt-1.5 text-xs bg-green-500 text-white px-3 py-1 rounded-full hover:bg-green-600 transition-colors font-medium">
+              <button onClick={() => onUpdateStatus(order.id, "Entregado")}
+                className="mt-1.5 text-xs bg-green-500 text-white px-3 py-1 rounded-full hover:bg-green-600 transition-colors font-medium">
                 ✓ Marcar entregado
               </button>
             </div>
