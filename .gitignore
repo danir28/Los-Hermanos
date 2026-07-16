@@ -21,3 +21,10 @@ yarn-error.log*
 .env
 .env.*
 !.env.example
+
+# Skills CLI (regenerar con: npx skills experimental_install)
+.agents/
+.claude/skills/
+
+# Log interno de task-observer (no es contenido del proyecto)
+skill-observations/
