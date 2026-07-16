@@ -1,0 +1,18 @@
+import type { Product } from "../types";
+
+// Catálogo de productos de la rotisería (hardcodeado, todavía no viene del backend).
+export const PRODUCTS: Product[] = [
+  { id: 1,  name: "Pollo Entero",        category: "Pollo",       price: 4500, description: "Pollo a la brasa marinado con chimichurri casero y especias criollas",              image: "https://images.unsplash.com/photo-1598103442097-8b74394b95c2?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
+  { id: 2,  name: "Medio Pollo",         category: "Pollo",       price: 2400, description: "Mitad de pollo a la brasa, dorado y jugoso por dentro",                             image: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
+  { id: 3,  name: "Cuarto de Pollo",     category: "Pollo",       price: 1300, description: "Cuarto de pollo con salsa criolla incluida",                                        image: "https://images.unsplash.com/photo-1574672280600-4accfa5b6f98?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
+  { id: 4,  name: "Ensalada Mixta",      category: "Ensaladas",   price: 800,  description: "Lechuga, tomate, zanahoria rallada y aderezo de la casa",                          image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
+  { id: 5,  name: "Papas Fritas",        category: "Guarniciones", price: 700,  description: "Papas fritas crocantes con sal marina gruesa",                                     image: "https://images.unsplash.com/photo-1573080496219-bb964701c394?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
+  { id: 6,  name: "Empanada de Carne",   category: "Empanadas",   price: 380,  description: "Carne cortada a cuchillo con huevo duro, aceitunas y cebolla",                     image: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
+  { id: 7,  name: "Empanada de Pollo",   category: "Empanadas",   price: 380,  description: "Pollo desmenuzado con morrón, cebolla y especias seleccionadas",                   image: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
+  { id: 8,  name: "Milanesa Napolitana", category: "Especiales",  price: 3200, description: "Milanesa de ternera con salsa de tomate, jamón y mozzarella gratinada",            image: "https://images.unsplash.com/photo-1585703900468-13b01e9f8b94?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
+  { id: 9,  name: "Provoleta",           category: "Especiales",  price: 1200, description: "Provolone a la plancha con orégano y aceite de oliva extra virgen",                image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: true  },
+  { id: 10, name: "Ensalada César",      category: "Ensaladas",   price: 1100, description: "Lechuga romana, crutones artesanales, parmesano y aderezo césar",                  image: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop&auto=format", featured: false, active: false, outOfStock: false },
+];
+
+// Categorías disponibles para filtrar el catálogo, incluyendo "Todos".
+export const CATEGORIES = ["Todos", "Pollo", "Ensaladas", "Guarniciones", "Empanadas", "Especiales"];
