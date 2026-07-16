@@ -100,6 +100,15 @@ export default function App() {
     { key: "integraciones", label: "Integraciones",Icon: Plug        },
   ];
 
+  // Vista inicial de staffView al entrar a cada rol de staff (la primera pestaña de cada uno).
+  // Cocina no tiene una vista "dashboard" como recepción y admin, así que no puede
+  // hardcodearse un único valor para los tres roles.
+  const STAFF_DEFAULT_VIEW: Record<Exclude<Role, "cliente">, string> = {
+    recepcionista: RECEPTIONIST_TABS[0].key,
+    cocina: KITCHEN_TABS[0].key,
+    admin: ADMIN_TABS[0].key,
+  };
+
   return (
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       {/* Role selector */}
@@ -107,7 +116,7 @@ export default function App() {
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex items-center overflow-x-auto scrollbar-hide">
             {ROLE_TABS.map(r => (
-              <button key={r.key} onClick={() => { setRole(r.key); setStaffView("dashboard"); }}
+              <button key={r.key} onClick={() => { setRole(r.key); if (r.key !== "cliente") setStaffView(STAFF_DEFAULT_VIEW[r.key]); }}
                 className={`flex items-center gap-2 px-4 py-3.5 text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${role === r.key ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                 <span>{r.emoji}</span>{r.label}
               </button>

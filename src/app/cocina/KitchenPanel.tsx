@@ -1,13 +1,17 @@
-import { ChefHat, Clock, Phone, User, RefreshCw } from "lucide-react";
+import { ChefHat, Clock, Phone, User } from "lucide-react";
 import type { Order } from "../types";
 import { formatCurrency } from "../lib/format";
 import { StatusBadge, TypePill } from "../components/shared";
 import { timeAgo } from "./timeAgo";
 import { AgeIndicator } from "./AgeIndicator";
 
-// Panel principal de cocina: lista de pedidos activos, ordenados con indicador de urgencia.
+// Panel principal de cocina: pedidos que todavía no tienen horario de retiro asignado, ordenados
+// de más a menos tiempo esperando. Los pedidos ya programados (para reprogramar) viven solo en
+// la pantalla "Asignar Horarios".
 export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssign: (id: string) => void }) {
-  const active = orders.filter(o => o.status !== "Entregado" && o.status !== "Listo para retirar" && o.status !== "Cancelado");
+  const active = orders
+    .filter(o => o.status !== "Entregado" && o.status !== "Listo para retirar" && o.status !== "Cancelado" && !o.estimatedTime)
+    .sort((a, b) => timeAgo(b.createdAt).minutes - timeAgo(a.createdAt).minutes);
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="flex items-center gap-3 mb-8">
@@ -31,9 +35,11 @@ export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssi
 
       <div className="space-y-3">
         {active.map(order => {
-          const noTime = !order.estimatedTime;
           const { minutes } = timeAgo(order.createdAt);
-          const urgentBorder = minutes >= 25 ? "border-red-300 shadow-red-50 shadow-md" : noTime ? "border-amber-300 shadow-amber-50 shadow-md" : "border-border";
+          const urgentBorder =
+            minutes >= 10 ? "border-red-300 shadow-red-50 shadow-md" :
+            minutes >= 5  ? "border-amber-300 shadow-amber-50 shadow-md" :
+                            "border-border";
           return (
             <div key={order.id} className={`bg-card border rounded-2xl p-5 transition-all ${urgentBorder}`}>
               <div className="flex items-start gap-4 flex-wrap">
@@ -42,7 +48,7 @@ export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssi
                     <span className="font-mono font-bold text-primary text-xl">#{order.id}</span>
                     <StatusBadge status={order.status} />
                     <TypePill type={order.type} />
-                    {noTime && <span className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-semibold animate-pulse">Sin horario</span>}
+                    <span className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-semibold animate-pulse">Sin horario</span>
                   </div>
                   <div className="flex items-center gap-2 mb-2 text-sm">
                     <User size={13} className="text-muted-foreground" />
@@ -63,27 +69,15 @@ export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssi
                       <Clock size={12} />
                       <span>Ingresó: <span className="font-mono font-semibold text-foreground">{order.createdAt} hs</span></span>
                     </div>
-                    <AgeIndicator createdAt={order.createdAt} />
+                    <AgeIndicator createdAt={order.createdAt} hasSchedule={false} />
                   </div>
                 </div>
                 <div className="shrink-0 text-right flex flex-col items-end gap-2">
                   <span className="font-mono font-bold text-lg text-foreground">{formatCurrency(order.total)}</span>
-                  {order.estimatedTime ? (
-                    <>
-                      <p className="text-xs font-semibold text-green-700 bg-green-50 border border-green-200 px-2.5 py-1.5 rounded-xl">
-                        Retiro: {order.estimatedTime} hs
-                      </p>
-                      <button onClick={() => onGoAssign(order.id)}
-                        className="flex items-center gap-1.5 text-xs text-primary border border-primary/30 bg-primary/5 hover:bg-primary hover:text-primary-foreground px-3 py-1.5 rounded-xl transition-colors font-semibold">
-                        <RefreshCw size={12} /> Reprogramar
-                      </button>
-                    </>
-                  ) : (
-                    <button onClick={() => onGoAssign(order.id)}
-                      className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors font-semibold shadow-sm">
-                      Asignar horario
-                    </button>
-                  )}
+                  <button onClick={() => onGoAssign(order.id)}
+                    className="text-xs bg-primary text-primary-foreground px-4 py-2 rounded-xl hover:bg-primary/90 transition-colors font-semibold shadow-sm">
+                    Asignar horario
+                  </button>
                 </div>
               </div>
             </div>

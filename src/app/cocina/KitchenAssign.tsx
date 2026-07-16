@@ -5,6 +5,7 @@ import { formatCurrency } from "../lib/format";
 import { TypePill } from "../components/shared";
 import { AgeIndicator } from "./AgeIndicator";
 import { REPROG_REASONS } from "./reprogReasons";
+import { timeAgo } from "./timeAgo";
 
 // Pantalla de cocina para asignar u reprogramar el horario de retiro de un pedido.
 export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: Order[]; onAssigned: (id: string, time: string) => void; preselectedId: string | null }) {
@@ -13,7 +14,16 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
   const [reason, setReason] = useState("");
   const [flash, setFlash] = useState(false);
 
-  const needsTime = orders.filter(o => o.status !== "Entregado" && o.status !== "Cancelado");
+  // Prioridad: primero los que todavía no tienen horario (y entre ellos, quien hace más tiempo
+  // que espera); recién después los que ya tienen horario asignado y solo se pueden reprogramar.
+  const needsTime = orders
+    .filter(o => o.status !== "Entregado" && o.status !== "Cancelado")
+    .sort((a, b) => {
+      const aHasTime = !!a.estimatedTime;
+      const bHasTime = !!b.estimatedTime;
+      if (aHasTime !== bHasTime) return aHasTime ? 1 : -1;
+      return timeAgo(b.createdAt).minutes - timeAgo(a.createdAt).minutes;
+    });
   const selected = orders.find(o => o.id === selectedId);
   const isReprogramming = !!(selected?.estimatedTime);
 
@@ -55,7 +65,7 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
                         ? <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">{order.estimatedTime} hs</span>
                         : <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full font-medium">Sin horario</span>
                       }
-                      <AgeIndicator createdAt={order.createdAt} />
+                      <AgeIndicator createdAt={order.createdAt} hasSchedule={hasTime} />
                     </div>
                   </div>
                   <p className="font-semibold text-sm mb-0.5">{order.customer}</p>

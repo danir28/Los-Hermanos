@@ -9,10 +9,10 @@ export const KANBAN_COLS: { status: OrderStatus; color: string; bg: string; bord
   { status: "Cancelado",          color: "text-red-700",    bg: "bg-red-50/70",    border: "border-red-200"    },
 ];
 
-// Próximo estado válido al que puede avanzar un pedido desde cada estado.
+// Próximo estado válido al que puede avanzar un pedido desde cada estado, para el tablero de cocina.
+// No incluye "Listo para retirar" → "Entregado": marcar la entrega es tarea de recepción, no de cocina.
 export const NEXT_STATES: Partial<Record<OrderStatus, OrderStatus>> = {
   "Pendiente":          "Programado",
   "Programado":         "En preparación",
   "En preparación":     "Listo para retirar",
-  "Listo para retirar": "Entregado",
 };

@@ -1,10 +1,11 @@
 import { Clock } from "lucide-react";
 import type { Order, OrderStatus } from "../types";
-import { STATUS, CAN_CANCEL } from "../data/statusConfig";
+import { STATUS } from "../data/statusConfig";
 import { AgeIndicator } from "./AgeIndicator";
 import { KANBAN_COLS, NEXT_STATES } from "./kanbanConfig";
 
-// Tablero kanban de cocina: columnas por estado, con acciones para avanzar o cancelar cada pedido.
+// Tablero kanban de cocina: columnas por estado, con acción para avanzar cada pedido al siguiente
+// estado de producción. Cancelar y marcar como entregado son tareas de recepción, no de cocina.
 export function KitchenKanban({ orders, onUpdateStatus }: { orders: Order[]; onUpdateStatus: (id: string, s: OrderStatus) => void }) {
   return (
     <div className="px-6 py-8 min-h-[calc(100vh-120px)]">
@@ -22,7 +23,6 @@ export function KitchenKanban({ orders, onUpdateStatus }: { orders: Order[]; onU
               <div className="space-y-2.5">
                 {colOrders.map(order => {
                   const nextStatus = NEXT_STATES[order.status];
-                  const canCancel = CAN_CANCEL.includes(order.status);
                   return (
                     <div key={order.id} className="bg-white rounded-xl border border-border p-3 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-center mb-1">
@@ -31,7 +31,7 @@ export function KitchenKanban({ orders, onUpdateStatus }: { orders: Order[]; onU
                       </div>
                       <p className="font-semibold text-sm mb-1 truncate">{order.customer}</p>
                       <div className="mb-2">
-                        <AgeIndicator createdAt={order.createdAt} />
+                        <AgeIndicator createdAt={order.createdAt} hasSchedule={!!order.estimatedTime} />
                       </div>
                       <div className="space-y-0.5 mb-3">
                         {order.items.map((item, i) => (
@@ -50,12 +50,6 @@ export function KitchenKanban({ orders, onUpdateStatus }: { orders: Order[]; onU
                           <button onClick={() => onUpdateStatus(order.id, nextStatus)}
                             className="w-full text-xs bg-primary text-primary-foreground py-1.5 rounded-lg hover:bg-primary/90 transition-colors font-semibold">
                             → {STATUS[nextStatus].label}
-                          </button>
-                        )}
-                        {canCancel && (
-                          <button onClick={() => onUpdateStatus(order.id, "Cancelado")}
-                            className="w-full text-xs border border-red-200 text-red-600 bg-red-50 hover:bg-red-100 py-1.5 rounded-lg transition-colors font-medium">
-                            Cancelar
                           </button>
                         )}
                       </div>
