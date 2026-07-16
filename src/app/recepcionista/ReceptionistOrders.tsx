@@ -1,11 +1,14 @@
 import { useState } from "react";
-import type { Order } from "../types";
+import { X } from "lucide-react";
+import type { Order, OrderStatus } from "../types";
 import { formatCurrency } from "../lib/format";
-import { StatusBadge, TypePill } from "../components/shared";
+import { CAN_CANCEL } from "../data/statusConfig";
+import { StatusBadge, TypePill, ConfirmDialog } from "../components/shared";
 
-// Listado completo de pedidos para recepción, con filtro por estado.
-export function ReceptionistOrders({ orders }: { orders: Order[] }) {
+// Listado completo de pedidos para recepción, con filtro por estado y cancelación de pedidos.
+export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]; onUpdateStatus: (id: string, status: OrderStatus) => void }) {
   const [filter, setFilter] = useState("Todos");
+  const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
   const tabs: { key: string; label: string }[] = [
     { key: "Todos",                label: "Todos"                },
     { key: "Pendiente",            label: "Pendiente"            },
@@ -37,7 +40,7 @@ export function ReceptionistOrders({ orders }: { orders: Order[] }) {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-secondary border-b border-border">
-                {["#", "Cliente", "Teléfono", "Productos", "Total", "Estado", "Horario", "Ingreso", "Canal"].map(h => (
+                {["#", "Cliente", "Teléfono", "Productos", "Total", "Estado", "Horario", "Ingreso", "Canal", "Acciones"].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -56,15 +59,33 @@ export function ReceptionistOrders({ orders }: { orders: Order[] }) {
                   </td>
                   <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{order.createdAt} hs</td>
                   <td className="px-4 py-3"><TypePill type={order.type} /></td>
+                  <td className="px-4 py-3">
+                    {CAN_CANCEL.includes(order.status) && (
+                      <button onClick={() => setCancelTargetId(order.id)}
+                        className="flex items-center gap-1 text-xs text-destructive border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors font-medium whitespace-nowrap">
+                        <X size={12} /> Cancelar
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}
               {filtered.length === 0 && (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-muted-foreground text-sm">Sin pedidos en este estado</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-muted-foreground text-sm">Sin pedidos en este estado</td></tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
+
+      {cancelTargetId && (
+        <ConfirmDialog
+          title="¿Cancelar pedido?"
+          description={`Se cancelará el pedido #${cancelTargetId}. Esta acción no se puede deshacer.`}
+          confirmLabel="Sí, cancelar"
+          onCancel={() => setCancelTargetId(null)}
+          onConfirm={() => { onUpdateStatus(cancelTargetId, "Cancelado"); setCancelTargetId(null); }}
+        />
+      )}
     </div>
   );
 }

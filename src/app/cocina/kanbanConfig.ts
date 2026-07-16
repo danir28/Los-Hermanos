@@ -16,6 +16,3 @@ export const NEXT_STATES: Partial<Record<OrderStatus, OrderStatus>> = {
   "En preparación":     "Listo para retirar",
   "Listo para retirar": "Entregado",
 };
-
-// Estados desde los que todavía se puede cancelar un pedido.
-export const CAN_CANCEL: OrderStatus[] = ["Pendiente", "Programado"];

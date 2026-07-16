@@ -1,8 +1,8 @@
 import { Clock } from "lucide-react";
 import type { Order, OrderStatus } from "../types";
-import { STATUS } from "../data/statusConfig";
+import { STATUS, CAN_CANCEL } from "../data/statusConfig";
 import { AgeIndicator } from "./AgeIndicator";
-import { KANBAN_COLS, NEXT_STATES, CAN_CANCEL } from "./kanbanConfig";
+import { KANBAN_COLS, NEXT_STATES } from "./kanbanConfig";
 
 // Tablero kanban de cocina: columnas por estado, con acciones para avanzar o cancelar cada pedido.
 export function KitchenKanban({ orders, onUpdateStatus }: { orders: Order[]; onUpdateStatus: (id: string, s: OrderStatus) => void }) {
