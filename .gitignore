@@ -3,6 +3,9 @@ dist
 dist-ssr
 *.local
 
+# Caché local de Vite (dependencias pre-bundleadas), se regenera sola
+.vite/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json
