@@ -18,12 +18,13 @@ export function CustomerTracking({ orders, preloadOrderId }: { orders: Order[]; 
   });
 
   const handleSearch = () => {
-    const q = query.trim().replace(/\D/g, "");
+    const trimmed = query.trim();
     let found: Order | undefined;
     if (searchType === "numero") {
-      found = orders.find(o => o.id === query.trim() || o.id === query.trim().padStart(3, "0"));
+      found = orders.find(o => o.id === trimmed);
     } else {
-      found = orders.find(o => o.phone.replace(/\D/g, "").includes(q));
+      const q = trimmed.replace(/\D/g, "");
+      found = orders.find(o => o.phone.replace(/\D/g, "") === q);
     }
     setResult(found ?? "not-found");
     setSearched(true);
@@ -79,12 +80,6 @@ export function CustomerTracking({ orders, preloadOrderId }: { orders: Order[]; 
           className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
           <Search size={17} /> Consultar estado
         </button>
-
-        <p className="text-center text-xs text-muted-foreground mt-4">
-          Pedidos de muestra: <button onClick={() => { setQuery("001"); setSearchType("numero"); }} className="underline text-primary">001</button>,{" "}
-          <button onClick={() => { setQuery("002"); setSearchType("numero"); }} className="underline text-primary">002</button>,{" "}
-          <button onClick={() => { setQuery("11-4521-8890"); setSearchType("telefono"); }} className="underline text-primary">11-4521-8890</button>
-        </p>
       </div>
     </div>
   );
@@ -123,7 +118,7 @@ export function CustomerTracking({ orders, preloadOrderId }: { orders: Order[]; 
         </div>
 
         {/* Estimated time */}
-        {order.estimatedTime && order.status !== "Cancelado" ? (
+        {order.estimatedTime && order.status !== "Cancelado" && (
           <div className="flex items-center gap-4 p-4 bg-primary/5 border border-primary/20 rounded-xl mb-4">
             <div className="w-10 h-10 bg-primary rounded-xl flex items-center justify-center shrink-0">
               <Clock size={18} className="text-primary-foreground" />
@@ -132,11 +127,6 @@ export function CustomerTracking({ orders, preloadOrderId }: { orders: Order[]; 
               <p className="text-xs text-muted-foreground">Horario estimado de retiro</p>
               <p className="font-mono font-bold text-2xl text-foreground">{order.estimatedTime} hs</p>
             </div>
-          </div>
-        ) : order.status !== "Cancelado" && (
-          <div className="p-4 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex gap-3 mb-4 leading-relaxed">
-            <Clock size={16} className="shrink-0 mt-0.5 text-amber-600" />
-            <span>La cocina aún no asignó un horario de retiro. Te notificaremos cuando esté listo.</span>
           </div>
         )}
 
