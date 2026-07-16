@@ -28,27 +28,30 @@ There is no test suite and no JS/TS linter configured in either package — only
 
 ## Architecture
 
-**Almost the entire application lives in one file: `src/app/App.tsx` (~1700 lines).** This is not an oversight — it's the current structure. When making changes, locate the relevant section by its banner comment (`// ─── Section Name ───`) rather than assuming a separate file exists. Sections, in order:
+**The app is split by role into folders under `src/app/`.** `App.tsx` itself is now small (~190 lines): it only owns top-level state (`role`, `customerView`, `staffView`, `cart`, `orders`, etc.), the cart/order mutation functions, and the role-based nav + view switch that renders the right section component. All the actual screens live one folder per role:
 
-- Types / Static Data / Utilities (top of file) — `Product`, `Order`, `CartItem` types, the in-memory `PRODUCTS` and `SAMPLE_ORDERS` arrays, `formatCurrency`, `STATUS`/`STATUS_MESSAGES` maps, `StatusBadge`, `TypePill`
-- **Customer**: `CustomerHome`, `CustomerMenu`, `CustomerCart`, `CustomerConfirmation`, `CustomerTracking`
-- **Receptionist** (`recepcionista`): `ReceptionistDashboard`, `ReceptionistOrders`, `ReceptionistCreateOrder`
-- **Kitchen** (`cocina`): `KitchenPanel`, `KitchenAssign`, `KitchenKanban`
-- **Admin**: `AdminDashboard`, `AdminProducts`, `AdminCategories`, `AdminIntegrations` (+ `IntegrationBadge` helper)
-- **Main App** (`export default function App()`) at the bottom — owns all top-level state and renders the role-based nav + view switch
+- `src/app/cliente/` — `CustomerHome`, `CustomerMenu`, `CustomerCart`, `CustomerConfirmation`, `CustomerTracking`, plus `statusMessages.ts` (customer-facing copy per `OrderStatus`). Barrel export in `index.ts`.
+- `src/app/recepcionista/` — `ReceptionistDashboard`, `ReceptionistOrders`, `ReceptionistCreateOrder`. Barrel export in `index.ts`.
+- `src/app/cocina/` — `KitchenPanel`, `KitchenAssign`, `KitchenKanban`, plus small extracted helpers: `AgeIndicator.tsx` (urgency pill), `kanbanConfig.ts` (columns/next-state/cancel rules), `reprogReasons.ts`, `timeAgo.ts`. Barrel export in `index.ts`.
+- `src/app/admin/` — `AdminDashboard`, `AdminProducts`, `AdminCategories`, `AdminIntegrations`, plus `IntegrationBadge.tsx`. Barrel export in `index.ts`.
+- `src/app/components/shared/` — `StatusBadge`, `TypePill`, used across roles. Barrel export in `index.ts`.
+- `src/app/data/` — `products.ts` (`PRODUCTS`, `CATEGORIES`), `sampleOrders.ts` (`SAMPLE_ORDERS`), `statusConfig.ts` (`STATUS` map: color/icon/label per `OrderStatus`).
+- `src/app/types.ts` — shared domain types: `Product`, `Order`, `CartItem`, `OrderStatus`, `OrderType`, `StatusCfg`.
+- `src/app/lib/` — `format.ts` (`formatCurrency`), `api.ts` (backend fetch wrapper).
 
-There is no router (react-router is a dependency but unused here). Navigation is plain `useState` + conditional rendering:
+When making changes, go straight to the relevant role folder rather than searching `App.tsx` — it no longer contains section banners; each screen is its own file.
+
+There is no router (react-router is a dependency but unused here). Navigation is plain `useState` + conditional rendering, owned by `App`:
 - `role` switches between four top-level personas: `cliente`, `recepcionista`, `cocina`, `admin`
 - `customerView` drives the customer sub-views (`home`, `menu`, `cart`, `confirmation`, `tracking`)
 - `staffView` drives the sub-views for whichever staff role is active (dashboard/orders/create, panel/assign/kanban, dashboard/products/categories/integraciones)
 - Section components receive state and setters as props from `App` (e.g. `cart`, `orders`, `onNavigate`) rather than reading from context — there is no global store.
 
-All data (`PRODUCTS`, `SAMPLE_ORDERS`) is still hardcoded in-file and not yet wired to the backend sync (see below). Order status transitions (`Pendiente → Programado → En preparación → Listo para retirar → Entregado`, or `Cancelado`) are modeled via the `OrderStatus` union and mutated in local component state in `App`.
+All data (`PRODUCTS`, `SAMPLE_ORDERS`) is still hardcoded in `src/app/data/` and not yet wired to the backend sync (see below). Order status transitions (`Pendiente → Programado → En preparación → Listo para retirar → Entregado`, or `Cancelado`) are modeled via the `OrderStatus` union and mutated in local component state in `App`.
 
 Other files:
 - `src/main.tsx` — entry point, mounts `<App />`
-- `src/app/lib/api.ts` — thin `fetch` wrapper for calling the backend (`VITE_API_URL`, default `http://localhost:4000`); used by `AdminIntegrations`
-- `src/app/components/ui/*` — shadcn/Radix primitives (button, dialog, card, etc.); mostly unused by `App.tsx` currently but available for use
+- `src/app/components/ui/*` — shadcn/Radix primitives (button, dialog, card, etc.); mostly unused by the app currently but available for use
 - `src/app/components/figma/ImageWithFallback.tsx` — image component from the original Figma export
 - `src/styles/theme.css` — CSS custom properties for the design system (colors, radius, chart colors); `:root` is the light theme, `.dark` variants exist for dark mode
 - `src/styles/index.css` — imports fonts, tailwind, theme in that order
@@ -93,6 +96,14 @@ The client provided a requirements document (products/categories catalog, cart-b
 - Path alias `@/*` → `./src/*` (configured in both `tsconfig.json` and `vite.config.ts`).
 - Only `.svg` and `.csv` are configured for raw asset imports — never add `.css`, `.tsx`, or `.ts` to `assetsInclude`.
 - Styling is Tailwind v4 (CSS-based config, no `tailwind.config.js`) plus CSS variables from `theme.css` for theme tokens (`bg-primary`, `text-muted-foreground`, etc. map to those variables).
+
+## Estándares de código
+
+Cada vez que se pida escribir, modificar o refactorizar código en este proyecto (frontend o backend), seguir siempre estos tres pasos:
+
+1. **Acomodar**: ubicar el código nuevo o modificado en el lugar que corresponde — la sección correcta de `App.tsx` (por su banner comment `// ─── Section Name ───`) o el archivo correspondiente dentro de `server/src/`, sin mezclar responsabilidades entre capas (UI, lógica de negocio, acceso a datos/integraciones).
+2. **Verificar**: antes de dar la tarea por terminada, correr `npm run typecheck` (frontend y/o `server/`, según lo que se haya tocado) y `npm run lint:css` si se modificaron estilos. No hay test suite todavía, así que estos checks son la única red de seguridad automática — no omitirlos.
+3. **Principios de diseño**: tener siempre presentes los principios SOLID, los patrones de diseño y las buenas prácticas de diseño de software al escribir o refactorizar cualquier código, evaluando cuáles aplican realmente a este proyecto (React con componentes funcionales y hooks, Express con capas de rutas/cliente/config en el backend) y cuáles serían over-engineering para el caso puntual. Esto sigue la regla del CLAUDE.md global: invocar la skill `solid-principles` al empezar la tarea de código y de nuevo al terminarla, para cerrar con el checklist de principios aplicados (o descartados a propósito, con motivo).
 
 ## ERRORS
 

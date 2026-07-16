@@ -8,6 +8,7 @@ export class FudoNotConfiguredError extends Error {
   }
 }
 
+// Pide el catálogo crudo a la API de FUDO y devuelve el array de productos tal cual responde.
 // TODO: no tenemos todavía la documentación oficial de la API de FUDO.
 // Cuando esté disponible, ajustar el endpoint, el esquema de autenticación
 // y el mapeo de campos en mapProduct().
@@ -30,6 +31,7 @@ async function fetchRawProducts(): Promise<FudoRawProduct[]> {
   return [];
 }
 
+// Convierte un producto crudo de FUDO al formato interno SyncedProduct que se persiste en la DB.
 function mapProduct(raw: FudoRawProduct): SyncedProduct {
   // TODO: mapear a los nombres de campo reales de FUDO una vez confirmada la doc.
   return {
@@ -41,6 +43,7 @@ function mapProduct(raw: FudoRawProduct): SyncedProduct {
   };
 }
 
+// Trae el catálogo completo desde FUDO y lo devuelve ya mapeado al formato interno.
 export async function fetchFudoProducts(): Promise<SyncedProduct[]> {
   const raw = await fetchRawProducts();
   return raw.map(mapProduct);

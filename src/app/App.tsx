@@ -9,6 +9,7 @@ import { CustomerHome, CustomerMenu, CustomerCart, CustomerConfirmation, Custome
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
 import { KitchenPanel, KitchenAssign, KitchenKanban } from "./cocina";
 import { AdminDashboard, AdminProducts, AdminCategories, AdminIntegrations } from "./admin";
+import { RoleNavTabs, type NavTab } from "./components/shared";
 
 // ─── Main App ──────────────────────────────────────────────────────────────────
 
@@ -63,6 +64,25 @@ export default function App() {
     { key: "recepcionista", label: "Recepcionista",  emoji: "📋" },
     { key: "cocina",        label: "Cocina",         emoji: "👨‍🍳" },
     { key: "admin",         label: "Administración", emoji: "⚙️"  },
+  ];
+
+  const RECEPTIONIST_TABS: NavTab[] = [
+    { key: "dashboard", label: "Dashboard",        Icon: LayoutDashboard },
+    { key: "orders",    label: "Lista de Pedidos", Icon: ClipboardList   },
+    { key: "create",    label: "Nuevo Pedido",     Icon: PlusCircle      },
+  ];
+
+  const KITCHEN_TABS: NavTab[] = [
+    { key: "panel",  label: "Panel",            Icon: ChefHat         },
+    { key: "assign", label: "Asignar Horarios", Icon: Clock           },
+    { key: "kanban", label: "Tablero",          Icon: LayoutDashboard },
+  ];
+
+  const ADMIN_TABS: NavTab[] = [
+    { key: "dashboard",     label: "Dashboard",    Icon: BarChart3   },
+    { key: "products",      label: "Productos",    Icon: ShoppingBag },
+    { key: "categories",    label: "Categorías",   Icon: Tag         },
+    { key: "integraciones", label: "Integraciones",Icon: Plug        },
   ];
 
   return (
@@ -120,20 +140,7 @@ export default function App() {
       {/* ── RECEPCIONISTA ── */}
       {role === "recepcionista" && (
         <>
-          <nav className="bg-card border-b border-border">
-            <div className="max-w-7xl mx-auto px-4 flex">
-              {[
-                { k: "dashboard", l: "Dashboard",        I: LayoutDashboard },
-                { k: "orders",    l: "Lista de Pedidos", I: ClipboardList   },
-                { k: "create",    l: "Nuevo Pedido",     I: PlusCircle      },
-              ].map(v => (
-                <button key={v.k} onClick={() => setStaffView(v.k)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${staffView === v.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <v.I size={15} />{v.l}
-                </button>
-              ))}
-            </div>
-          </nav>
+          <RoleNavTabs tabs={RECEPTIONIST_TABS} active={staffView} onSelect={setStaffView} />
           {staffView === "dashboard" && <ReceptionistDashboard orders={orders} onNavigate={setStaffView} />}
           {staffView === "orders"    && <ReceptionistOrders orders={orders} />}
           {staffView === "create"    && <ReceptionistCreateOrder onConfirm={() => setStaffView("dashboard")} />}
@@ -143,20 +150,7 @@ export default function App() {
       {/* ── COCINA ── */}
       {role === "cocina" && (
         <>
-          <nav className="bg-card border-b border-border">
-            <div className="max-w-7xl mx-auto px-4 flex">
-              {[
-                { k: "panel",  l: "Panel",            I: ChefHat         },
-                { k: "assign", l: "Asignar Horarios", I: Clock           },
-                { k: "kanban", l: "Tablero",          I: LayoutDashboard },
-              ].map(v => (
-                <button key={v.k} onClick={() => setStaffView(v.k)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${staffView === v.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <v.I size={15} />{v.l}
-                </button>
-              ))}
-            </div>
-          </nav>
+          <RoleNavTabs tabs={KITCHEN_TABS} active={staffView} onSelect={setStaffView} />
           {staffView === "panel"  && <KitchenPanel orders={orders} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("assign"); }} />}
           {staffView === "assign" && <KitchenAssign orders={orders} onAssigned={assignTime} preselectedId={preselectedAssignId} />}
           {staffView === "kanban" && <KitchenKanban orders={orders} onUpdateStatus={updateStatus} />}
@@ -166,21 +160,7 @@ export default function App() {
       {/* ── ADMIN ── */}
       {role === "admin" && (
         <>
-          <nav className="bg-card border-b border-border">
-            <div className="max-w-7xl mx-auto px-4 flex">
-              {[
-                { k: "dashboard",     l: "Dashboard",     I: BarChart3   },
-                { k: "products",      l: "Productos",      I: ShoppingBag },
-                { k: "categories",    l: "Categorías",     I: Tag         },
-                { k: "integraciones", l: "Integraciones",  I: Plug        },
-              ].map(v => (
-                <button key={v.k} onClick={() => setStaffView(v.k)}
-                  className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${staffView === v.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
-                  <v.I size={15} />{v.l}
-                </button>
-              ))}
-            </div>
-          </nav>
+          <RoleNavTabs tabs={ADMIN_TABS} active={staffView} onSelect={setStaffView} />
           {staffView === "dashboard"     && <AdminDashboard orders={orders} />}
           {staffView === "products"      && <AdminProducts />}
           {staffView === "categories"    && <AdminCategories />}

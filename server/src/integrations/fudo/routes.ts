@@ -5,11 +5,13 @@ import { fetchFudoProducts, FudoNotConfiguredError } from "./client.js";
 
 export const fudoRouter = Router();
 
+// Informa si FUDO está configurado y cuándo fue la última sincronización exitosa.
 fudoRouter.get("/status", async (_req, res) => {
   const lastSynced = await db.fudoProduct.aggregate({ _max: { updatedAt: true } });
   res.json({ configured: isFudoConfigured(), lastSync: lastSynced._max.updatedAt ?? null });
 });
 
+// Trae el catálogo actual de FUDO y hace upsert de cada producto en la tabla FudoProduct.
 fudoRouter.post("/sync", async (_req, res) => {
   try {
     const products = await fetchFudoProducts();
@@ -32,6 +34,7 @@ fudoRouter.post("/sync", async (_req, res) => {
   }
 });
 
+// Devuelve el último catálogo de FUDO guardado en la DB (snapshot, no en vivo).
 fudoRouter.get("/products", async (_req, res) => {
   const products = await db.fudoProduct.findMany({ orderBy: { name: "asc" } });
   res.json(products.map(p => ({ ...p, price: Number(p.price) })));

@@ -14,5 +14,8 @@ export const config = {
   },
 };
 
+// Indica si hay credenciales de FUDO cargadas (URL y API key) para habilitar la integración.
 export const isFudoConfigured = () => Boolean(config.fudo.apiUrl && config.fudo.apiKey);
+
+// Indica si hay una URL del agente de WhatsApp cargada para habilitar la integración.
 export const isWhatsappConfigured = () => Boolean(config.whatsapp.agentUrl);

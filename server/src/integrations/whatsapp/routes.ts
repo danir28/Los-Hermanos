@@ -7,6 +7,7 @@ import type { Prisma } from "../../generated/prisma/client.js";
 
 export const whatsappRouter = Router();
 
+// Informa si el agente de WhatsApp está configurado (WHATSAPP_AGENT_URL cargada).
 whatsappRouter.get("/status", (_req, res) => {
   res.json({ configured: isWhatsappConfigured() });
 });
@@ -32,6 +33,7 @@ whatsappRouter.post("/webhook", async (req, res) => {
   res.status(200).json({ received: true });
 });
 
+// Le pide al agente que envíe un mensaje de WhatsApp y audita el intento (éxito o error) en la DB.
 whatsappRouter.post("/notify", async (req, res) => {
   const { to, message } = req.body as { to?: string; message?: string };
   if (!to || !message) {
