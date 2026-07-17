@@ -4,6 +4,8 @@ import { config } from "./config.js";
 import { db } from "./db.js";
 import { fudoRouter } from "./integrations/fudo/routes.js";
 import { whatsappRouter } from "./integrations/whatsapp/routes.js";
+import { ordersRouter } from "./orders/routes.js";
+import { reportsRouter } from "./reports/routes.js";
 
 const app = express();
 
@@ -13,6 +15,8 @@ app.use(express.json());
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/fudo", fudoRouter);
 app.use("/api/whatsapp", whatsappRouter);
+app.use("/api/orders", ordersRouter);
+app.use("/api/reports", reportsRouter);
 
 const server = app.listen(config.port, () => {
   console.log(`Servidor escuchando en http://localhost:${config.port}`);

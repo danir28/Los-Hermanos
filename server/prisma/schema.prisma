@@ -46,3 +46,36 @@ model WhatsappOutboundMessage {
 
   @@map("whatsapp_outbound_messages")
 }
+
+// Pedido de un cliente: quién lo hizo, por qué canal (type), su estado actual y el
+// horario estimado que le asignó cocina. orderNumber es el correlativo visible en
+// toda la UI (ej. "001"); id interno queda como uuid, igual que el resto de los modelos.
+model Order {
+  id            String      @id @default(uuid())
+  orderNumber   Int         @unique @default(autoincrement())
+  customer      String
+  phone         String
+  status        String
+  type          String
+  total         Decimal     @db.Decimal(10, 2)
+  estimatedTime String?
+  createdAt     DateTime    @default(now())
+  items         OrderItem[]
+
+  @@index([createdAt])
+  @@map("orders")
+}
+
+// Ítem de un pedido: producto, cantidad y precio al momento de la compra (no el
+// precio actual del catálogo, para no alterar pedidos ya facturados si cambia el precio).
+model OrderItem {
+  id      String  @id @default(uuid())
+  orderId String
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  name    String
+  qty     Int
+  price   Decimal @db.Decimal(10, 2)
+
+  @@index([orderId])
+  @@map("order_items")
+}
