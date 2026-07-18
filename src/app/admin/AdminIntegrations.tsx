@@ -1,10 +1,13 @@
 import { useEffect, useState } from "react";
 import { RefreshCw } from "lucide-react";
 import { api } from "../lib/api";
+import { useAuth } from "../auth";
 import { IntegrationBadge, type IntegrationCardStatus } from "./IntegrationBadge";
 
 // Pantalla de Integraciones: estado de FUDO y WhatsApp, y disparo manual de sincronización con FUDO.
+// Solo-admin del lado del backend (requireRole("admin")): el token sale de la sesión de staff.
 export function AdminIntegrations() {
+  const { token } = useAuth();
   const [fudo, setFudo] = useState<{ status: IntegrationCardStatus; error: string | null; lastSync: string | null }>(
     { status: "loading", error: null, lastSync: null }
   );
@@ -15,23 +18,25 @@ export function AdminIntegrations() {
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
   const refresh = () => {
+    if (!token) return;
     setFudo(s => ({ ...s, status: "loading" }));
     setWhatsapp(s => ({ ...s, status: "loading" }));
-    api.fudoStatus()
+    api.fudoStatus(token)
       .then(r => setFudo({ status: r.configured ? "ok" : "off", error: null, lastSync: r.lastSync ?? null }))
       .catch(e => setFudo({ status: "error", error: e instanceof Error ? e.message : "Error desconocido", lastSync: null }));
-    api.whatsappStatus()
+    api.whatsappStatus(token)
       .then(r => setWhatsapp({ status: r.configured ? "ok" : "off", error: null }))
       .catch(e => setWhatsapp({ status: "error", error: e instanceof Error ? e.message : "Error desconocido" }));
   };
 
-  useEffect(refresh, []);
+  useEffect(refresh, [token]);
 
   const handleSync = async () => {
+    if (!token) return;
     setSyncing(true);
     setSyncMsg(null);
     try {
-      const r = await api.fudoSync();
+      const r = await api.fudoSync(token);
       setSyncMsg(`Se sincronizaron ${r.synced} productos.`);
       refresh();
     } catch (e) {

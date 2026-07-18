@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { requireAuth, requireRole } from "../../auth/middleware.js";
 import { db } from "../../db.js";
 import { config, isWhatsappConfigured } from "../../config.js";
 import { sendWhatsappMessage, WhatsappNotConfiguredError } from "./client.js";
@@ -7,8 +8,9 @@ import type { Prisma } from "../../generated/prisma/client.js";
 
 export const whatsappRouter = Router();
 
-// Informa si el agente de WhatsApp está configurado (WHATSAPP_AGENT_URL cargada).
-whatsappRouter.get("/status", (_req, res) => {
+// Informa si el agente de WhatsApp está configurado (WHATSAPP_AGENT_URL cargada). Solo-admin,
+// igual que /notify — a diferencia de /webhook, que lo llama el agente, no un empleado logueado.
+whatsappRouter.get("/status", requireAuth, requireRole("admin"), (_req, res) => {
   res.json({ configured: isWhatsappConfigured() });
 });
 
@@ -34,7 +36,7 @@ whatsappRouter.post("/webhook", async (req, res) => {
 });
 
 // Le pide al agente que envíe un mensaje de WhatsApp y audita el intento (éxito o error) en la DB.
-whatsappRouter.post("/notify", async (req, res) => {
+whatsappRouter.post("/notify", requireAuth, requireRole("admin"), async (req, res) => {
   const { to, message } = req.body as { to?: string; message?: string };
   if (!to || !message) {
     res.status(400).json({ error: 'Faltan los campos "to" y "message"' });

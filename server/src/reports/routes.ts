@@ -1,7 +1,12 @@
 import { Router } from "express";
+import { requireAuth, requireRole } from "../auth/middleware.js";
 import { getMonthlyReport, InvalidMonthError } from "./service.js";
 
 export const reportsRouter = Router();
+
+// Todo el módulo de reportes es solo-admin: cifras de ventas y top de productos no
+// deben ser accesibles ni para recepción ni para cocina.
+reportsRouter.use(requireAuth, requireRole("admin"));
 
 // Devuelve ventas totales, cantidad de pedidos entregados y top 5 de productos de un mes.
 reportsRouter.get("/monthly", async (req, res) => {

@@ -4,30 +4,32 @@ import type { Order, OrderStatus } from "../types";
 import { STATUS } from "../data/statusConfig";
 import { StatusBadge, TypePill } from "../components/shared";
 import { STATUS_MESSAGES } from "./statusMessages";
+import { api } from "../lib/api";
 
 // Pantalla de seguimiento de pedido: buscar por número o teléfono y ver la línea de tiempo del estado.
-export function CustomerTracking({ orders, preloadOrderId }: { orders: Order[]; preloadOrderId?: string }) {
+// Busca contra GET /api/orders/lookup (pública, devuelve un único pedido) en vez de filtrar un
+// array completo recibido por props — ese array ya no existe del lado del cliente porque
+// GET /api/orders pasó a ser solo-staff (expondría nombre/teléfono de todos los clientes).
+export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
   const [searchType, setSearchType] = useState<"numero" | "telefono">("numero");
-  const [query, setQuery] = useState(preloadOrderId ?? "");
-  const [searched, setSearched] = useState(!!preloadOrderId);
-  const [result, setResult] = useState<Order | "not-found" | null>(() => {
-    if (preloadOrderId) {
-      return orders.find(o => o.id === preloadOrderId) ?? "not-found";
-    }
-    return null;
-  });
+  const [query, setQuery] = useState(preloadOrder?.id ?? "");
+  const [searched, setSearched] = useState(!!preloadOrder);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<Order | "not-found" | null>(preloadOrder ?? null);
 
-  const handleSearch = () => {
+  const handleSearch = async () => {
     const trimmed = query.trim();
-    let found: Order | undefined;
-    if (searchType === "numero") {
-      found = orders.find(o => o.id === trimmed);
-    } else {
-      const q = trimmed.replace(/\D/g, "");
-      found = orders.find(o => o.phone.replace(/\D/g, "") === q);
+    if (!trimmed) return;
+    setLoading(true);
+    try {
+      const found = await api.ordersLookup(searchType === "numero" ? { orderNumber: trimmed } : { phone: trimmed });
+      setResult(found ?? "not-found");
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Error al buscar el pedido");
+    } finally {
+      setSearched(true);
+      setLoading(false);
     }
-    setResult(found ?? "not-found");
-    setSearched(true);
   };
 
   const statuses: OrderStatus[] = ["Pendiente", "Programado", "En preparación", "Listo para retirar", "Entregado"];
@@ -76,9 +78,9 @@ export function CustomerTracking({ orders, preloadOrderId }: { orders: Order[]; 
           </div>
         )}
 
-        <button onClick={handleSearch} disabled={!query.trim()}
+        <button onClick={handleSearch} disabled={!query.trim() || loading}
           className="w-full bg-primary text-primary-foreground py-3.5 rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
-          <Search size={17} /> Consultar estado
+          <Search size={17} /> {loading ? "Consultando…" : "Consultar estado"}
         </button>
       </div>
     </div>

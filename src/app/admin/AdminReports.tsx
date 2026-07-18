@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { formatCurrency } from "../lib/format";
 import { api, type MonthlyReport } from "../lib/api";
+import { useAuth } from "../auth";
 
 // Formatea un Date a "YYYY-MM", el formato que usan el input de mes y el backend.
 function toMonthValue(date: Date): string {
@@ -18,17 +19,20 @@ const lastMonth = new Date(today.getFullYear(), today.getMonth() - 1, 1);
 const twoMonthsAgo = new Date(today.getFullYear(), today.getMonth() - 2, 1);
 
 // Tarjeta con el reporte de un mes elegible: ventas totales, pedidos entregados y top 5 productos.
+// Solo-admin del lado del backend (requireRole("admin")): el token sale de la sesión de staff.
 function MonthReportCard({ month, onMonthChange }: { month: string; onMonthChange: (value: string) => void }) {
+  const { token } = useAuth();
   const [report, setReport] = useState<MonthlyReport | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!token) return;
     setReport(null);
     setError(null);
-    api.reportsMonthly(month)
+    api.reportsMonthly(token, month)
       .then(setReport)
       .catch(e => setError(e instanceof Error ? e.message : "Error al cargar el reporte"));
-  }, [month]);
+  }, [token, month]);
 
   const maxQty = report?.topProducts[0]?.qty ?? 1;
 

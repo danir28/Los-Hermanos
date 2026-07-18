@@ -79,3 +79,20 @@ model OrderItem {
   @@index([orderId])
   @@map("order_items")
 }
+
+// Usuario interno (recepción, cocina, admin) con acceso a la app de staff. Alta solo por
+// script de seed en este sprint (sin pantalla CRUD todavía). rol queda como String, no enum
+// de Prisma, misma convención que Order.status/Order.type — los valores válidos
+// ("recepcionista" | "cocina" | "admin") se tipan y validan en server/src/auth/types.ts.
+model User {
+  id           String   @id @default(uuid())
+  nombre       String
+  usuario      String   @unique
+  email        String   @unique
+  passwordHash String
+  rol          String
+  activo       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  @@map("users")
+}

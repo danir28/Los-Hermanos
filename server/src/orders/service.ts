@@ -64,6 +64,28 @@ export async function listOrders(): Promise<OrderDTO[]> {
   return orders.map(toDTO);
 }
 
+// Busca un único pedido por su id visible ("007") o por teléfono (comparado sin
+// separadores). Nunca devuelve el listado completo — es el endpoint público que
+// reemplaza el filtro client-side que antes hacía CustomerTracking sobre todos los
+// pedidos que recibía por props.
+export async function lookupOrder(params: { orderNumber?: string; phone?: string }): Promise<OrderDTO | null> {
+  if (params.orderNumber) {
+    const orderNumber = Number(params.orderNumber);
+    if (!Number.isInteger(orderNumber)) return null;
+    const order = await db.order.findUnique({ where: { orderNumber }, include: { items: true } });
+    return order ? toDTO(order) : null;
+  }
+
+  if (params.phone) {
+    const normalized = params.phone.replace(/\D/g, "");
+    const orders = await db.order.findMany({ include: { items: true }, orderBy: { createdAt: "desc" } });
+    const match = orders.find(o => o.phone.replace(/\D/g, "") === normalized);
+    return match ? toDTO(match) : null;
+  }
+
+  return null;
+}
+
 // Actualiza el estado y/o el horario de un pedido existente, buscado por su id visible ("007").
 // Asignar un horario implica pasar a "Programado", igual que hace assignTime hoy en App.tsx.
 export async function updateOrder(displayId: string, patch: UpdateOrderInput): Promise<OrderDTO> {

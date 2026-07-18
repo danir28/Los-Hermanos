@@ -1,9 +1,14 @@
 import { Router } from "express";
+import { requireAuth, requireRole } from "../../auth/middleware.js";
 import { db } from "../../db.js";
 import { isFudoConfigured } from "../../config.js";
 import { fetchFudoProducts, FudoNotConfiguredError } from "./client.js";
 
 export const fudoRouter = Router();
+
+// Todo el módulo de FUDO es solo-admin: dispara syncs contra el POS y expone el
+// catálogo interno, no es algo que recepción o cocina deban poder tocar.
+fudoRouter.use(requireAuth, requireRole("admin"));
 
 // Informa si FUDO está configurado y cuándo fue la última sincronización exitosa.
 fudoRouter.get("/status", async (_req, res) => {

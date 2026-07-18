@@ -4,8 +4,10 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "vite build",
-    "dev": "vite",
+    "build": "vite build --config vite.cliente.config.ts",
+    "dev": "vite --config vite.cliente.config.ts",
+    "build:staff": "vite build --config vite.staff.config.ts",
+    "dev:staff": "vite --config vite.staff.config.ts",
     "typecheck": "tsc --noEmit",
     "lint:css": "stylelint \"src/**/*.css\"",
     "server:install": "npm install --prefix server",

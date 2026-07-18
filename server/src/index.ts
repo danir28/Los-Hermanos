@@ -1,5 +1,7 @@
 import cors from "cors";
 import express from "express";
+import type { NextFunction, Request, Response } from "express";
+import { authRouter } from "./auth/routes.js";
 import { config } from "./config.js";
 import { db } from "./db.js";
 import { fudoRouter } from "./integrations/fudo/routes.js";
@@ -13,10 +15,18 @@ app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
 
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
+app.use("/api/auth", authRouter);
 app.use("/api/fudo", fudoRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/reports", reportsRouter);
+
+// Middleware de error global: atrapa lo que asyncHandler reenvía con next(err) para que
+// un error de un handler async devuelva 500 en vez de dejar el request colgado.
+app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
+  console.error(err);
+  res.status(500).json({ error: err instanceof Error ? err.message : "Error interno del servidor" });
+});
 
 const server = app.listen(config.port, () => {
   console.log(`Servidor escuchando en http://localhost:${config.port}`);
