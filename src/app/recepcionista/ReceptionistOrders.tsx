@@ -7,7 +7,7 @@ import { StatusBadge, TypePill, ConfirmDialog } from "../components/shared";
 
 // Listado completo de pedidos para recepción, con filtro por estado y cancelación de pedidos.
 export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]; onUpdateStatus: (id: string, status: OrderStatus) => void }) {
-  const [filter, setFilter] = useState("Todos");
+  const [filter, setFilter] = useState("Pendiente");
   // Se guarda el pedido completo (no solo el id) porque el diálogo necesita mostrar el número
   // visible (orderNumber) además de mandar el id real a onUpdateStatus.
   const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
