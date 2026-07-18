@@ -5,20 +5,21 @@ import { formatCurrency } from "../lib/format";
 import { CAN_CANCEL } from "../data/statusConfig";
 import { StatusBadge, TypePill, ConfirmDialog } from "../components/shared";
 
-// Listado completo de pedidos para recepción, con filtro por estado y cancelación de pedidos.
+// Listado de pedidos de la jornada comercial actual para recepción (el backend ya restringe
+// `orders` a hoy para este rol — ver GET /api/orders), con filtro por estado y cancelación.
 export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]; onUpdateStatus: (id: string, status: OrderStatus) => void }) {
-  const [filter, setFilter] = useState("Pendiente");
+  const [filter, setFilter] = useState("Todos");
   // Se guarda el pedido completo (no solo el id) porque el diálogo necesita mostrar el número
   // visible (orderNumber) además de mandar el id real a onUpdateStatus.
   const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
   const tabs: { key: string; label: string }[] = [
+    { key: "Todos",                label: "Todos"                },
     { key: "Pendiente",            label: "Pendiente"            },
     { key: "Programado",           label: "Programado"           },
     { key: "En preparación",       label: "En preparación"       },
     { key: "Listo para retirar",   label: "Listo para retirar"   },
     { key: "Entregado",            label: "Entregado"            },
     { key: "Cancelado",            label: "Cancelado"            },
-    { key: "Todos",                label: "Todos"                },
   ];
   const filtered = filter === "Todos" ? orders : orders.filter(o => o.status === filter);
 

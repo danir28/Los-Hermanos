@@ -38,10 +38,13 @@ ordersRouter.get("/lookup", asyncHandler(async (req, res) => {
   res.json(order);
 }));
 
-// Devuelve todos los pedidos, más nuevo primero. Solo staff: expone nombre y teléfono
-// de todos los clientes, no puede ser público.
-ordersRouter.get("/", requireAuth, requireRole("recepcionista", "cocina", "admin"), asyncHandler(async (_req, res) => {
-  res.json(await listOrders());
+// Devuelve los pedidos, más nuevo primero. Solo staff: expone nombre y teléfono de todos
+// los clientes, no puede ser público. Recepción solo puede ver la jornada comercial en
+// curso, nunca el historial completo (cocina/admin siguen recibiendo todos los pedidos,
+// que es lo que sus propias pantallas necesitan).
+ordersRouter.get("/", requireAuth, requireRole("recepcionista", "cocina", "admin"), asyncHandler(async (req, res) => {
+  const onlyCurrentBusinessDay = req.user!.rol === "recepcionista";
+  res.json(await listOrders({ onlyCurrentBusinessDay }));
 }));
 
 // Actualiza el estado y/o horario de un pedido existente. Solo staff.

@@ -100,7 +100,9 @@ export const api = {
       throw e;
     }
   },
-  // Solo staff: expone nombre/teléfono de todos los clientes.
+  // Solo staff: expone nombre/teléfono de todos los clientes. El backend recorta el
+  // resultado a la jornada comercial actual cuando el token es de un recepcionista
+  // (cocina/admin siguen recibiendo el historial completo).
   ordersList: (token: string) => request<Order[]>("/api/orders", { token }),
   // Actualiza estado y/o horario estimado de un pedido puntual, identificado por su id (uuid) —
   // nunca por orderNumber, que puede repetirse entre jornadas comerciales distintas.
