@@ -91,18 +91,18 @@ export async function listOrders(options?: { onlyCurrentBusinessDay?: boolean })
 // separadores). Nunca devuelve el listado completo — es el endpoint público que reemplaza el
 // filtro client-side que antes hacía CustomerTracking sobre todos los pedidos que recibía por
 // props.
-// OJO: orderNumber ya no es único globalmente (se reinicia cada jornada comercial), así que una
-// búsqueda solo por número puede tener más de un pedido candidato en toda la historia — de
-// forma interina se devuelve el más reciente (mayor businessDate). Pendiente (a propósito, para
-// la rama "cliente"): restringir esta búsqueda a la jornada comercial actual únicamente, para
-// que un número de un día anterior nunca aparezca como resultado de "hoy".
+// orderNumber ya no es único globalmente (se reinicia cada jornada comercial), así que una
+// búsqueda solo por número se restringe a la jornada comercial en curso (ver businessDayFor) —
+// { businessDate, orderNumber } sí es único (@@unique en schema.prisma), así que esto es un
+// findUnique real, no "el más reciente que matchee". Un pedido de una jornada anterior con el
+// mismo número nunca aparece como resultado de "hoy": si hoy no hay ningún pedido con ese
+// número, la búsqueda debe fallar (not-found), no resolver a uno viejo.
 export async function lookupOrder(params: { orderNumber?: string; phone?: string }): Promise<OrderDTO | null> {
   if (params.orderNumber) {
     const orderNumber = Number(params.orderNumber);
     if (!Number.isInteger(orderNumber)) return null;
-    const order = await db.order.findFirst({
-      where: { orderNumber },
-      orderBy: { businessDate: "desc" },
+    const order = await db.order.findUnique({
+      where: { businessDate_orderNumber: { businessDate: businessDayFor(new Date()), orderNumber } },
       include: { items: true },
     });
     return order ? toDTO(order) : null;
