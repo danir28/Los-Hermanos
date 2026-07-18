@@ -4,6 +4,8 @@ import { formatCurrency } from "../lib/format";
 import { StatusBadge } from "../components/shared";
 
 // Dashboard administrativo: métricas del día, productos más pedidos y pedidos recientes.
+// El backend ya restringe `orders` a la jornada comercial actual para este rol (ver
+// GET /api/orders) — a diferencia de Reportes, que sí trabaja sobre el histórico completo.
 export function AdminDashboard({ orders }: { orders: Order[] }) {
   const productSales: Record<string, number> = {};
   orders.filter(o => o.status !== "Cancelado").forEach(o => o.items.forEach(i => {

@@ -79,8 +79,8 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
 
 // Lista pedidos, más nuevo primero (mismo orden que ya usa la app en memoria).
 // `onlyCurrentBusinessDay` restringe el resultado a la jornada comercial en curso (ver
-// businessDayFor) — lo usa el router para que recepción solo vea los pedidos de hoy y nunca
-// el historial completo (cocina/admin siguen recibiendo todos los pedidos, sin este filtro).
+// businessDayFor) — lo usa el router para recepción y admin (el dashboard de admin es "hoy",
+// no el histórico completo; cocina sigue recibiendo todos los pedidos, sin este filtro).
 export async function listOrders(options?: { onlyCurrentBusinessDay?: boolean }): Promise<OrderDTO[]> {
   const where = options?.onlyCurrentBusinessDay ? { businessDate: businessDayFor(new Date()) } : undefined;
   const orders = await db.order.findMany({ where, include: { items: true }, orderBy: { createdAt: "desc" } });
