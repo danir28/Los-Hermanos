@@ -17,12 +17,14 @@ export default function AppCliente() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
 
+  // Agrega un producto al carrito: si ya estaba, suma 1 a la cantidad existente en vez de duplicar la línea.
   const addToCart = (product: Product) => setCart(prev => {
     const ex = prev.find(i => i.id === product.id);
     if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
     return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1, image: product.image }];
   });
 
+  // Suma/resta delta a la cantidad de un ítem del carrito y lo quita por completo si llega a 0.
   const updateCart = (id: number, delta: number) => setCart(prev =>
     prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
   );

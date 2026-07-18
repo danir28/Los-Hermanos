@@ -17,6 +17,8 @@ export function AdminIntegrations() {
   const [syncing, setSyncing] = useState(false);
   const [syncMsg, setSyncMsg] = useState<string | null>(null);
 
+  // Vuelve a consultar el estado de ambas integraciones contra el backend; cada una entra en
+  // "loading" y se resuelve por separado, así una falla (ej. FUDO caído) no bloquea el estado de la otra.
   const refresh = () => {
     if (!token) return;
     setFudo(s => ({ ...s, status: "loading" }));
@@ -31,6 +33,8 @@ export function AdminIntegrations() {
 
   useEffect(refresh, [token]);
 
+  // Dispara la sincronización manual del catálogo de FUDO y, si sale bien, refresca el estado
+  // de ambas integraciones para que "Última sincronización" quede actualizada de inmediato.
   const handleSync = async () => {
     if (!token) return;
     setSyncing(true);

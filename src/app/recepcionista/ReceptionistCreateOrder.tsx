@@ -26,18 +26,23 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
     return true;
   });
 
+  // Agrega un producto al pedido en carga: si ya estaba, suma 1 a la cantidad existente en vez de duplicar la línea.
   const addItem = (p: Product) => setOrderCart(prev => {
     const ex = prev.find(i => i.id === p.id);
     if (ex) return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i);
     return [...prev, { id: p.id, name: p.name, price: p.price, qty: 1, image: p.image }];
   });
 
+  // Suma/resta delta a la cantidad de un ítem y lo quita del pedido si llega a 0.
   const updateQty = (id: number, delta: number) => setOrderCart(prev =>
     prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
   );
 
   const total = orderCart.reduce((s, i) => s + i.price * i.qty, 0);
 
+  // Valida que haya productos y datos del cliente cargados, muestra el cartel de "registrado"
+  // y recién después de una breve animación (1.2s) llama a onConfirm con el pedido armado —
+  // así App.tsx lo crea en el backend sin que se sienta instantáneo/brusco para quien lo carga.
   const handleConfirm = () => {
     if (!orderCart.length || !name || !phone) return;
     setConfirmed(true);
@@ -47,6 +52,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
     }, 1200);
   };
 
+  // Descarta el pedido en carga: vacía carrito, datos del cliente y cierra el diálogo de confirmación.
   const handleCancel = () => {
     setOrderCart([]); setName(""); setPhone(""); setShowCancelConfirm(false);
   };

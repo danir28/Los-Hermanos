@@ -17,6 +17,9 @@ export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Order | "not-found" | null>(preloadOrder ?? null);
 
+  // Busca el pedido contra el backend según el criterio elegido (número o teléfono) y guarda
+  // el resultado, o "not-found" si el backend no encontró coincidencias, para distinguirlo
+  // del estado inicial (result === null, todavía no se buscó nada).
   const handleSearch = async () => {
     const trimmed = query.trim();
     if (!trimmed) return;

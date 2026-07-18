@@ -51,6 +51,8 @@ const STAFF_DEFAULT_VIEW: Record<UserRole, string> = {
   admin: ADMIN_TABS[0].key,
 };
 
+// Punto de entrada de la app de staff: solo envuelve todo en AuthProvider para que
+// AppStaffContent (y todo lo que cuelga de ella) tenga acceso a la sesión vía useAuth().
 export default function AppStaff() {
   return (
     <AuthProvider>
@@ -59,6 +61,9 @@ export default function AppStaff() {
   );
 }
 
+// Contenido real de la app de staff, ya con sesión resuelta (o mostrando el login si no la hay).
+// Dueña del estado de pedidos y de la vista activa dentro de la sección fija del usuario logueado
+// (recepción/cocina/admin, ver SECTION_LABEL/STAFF_DEFAULT_VIEW arriba).
 function AppStaffContent() {
   const { user, token, loading, logout } = useAuth();
 
@@ -106,6 +111,8 @@ function AppStaffContent() {
     }
   };
 
+  // Cambia el estado de un pedido puntual (por id, no por orderNumber) y refleja el resultado
+  // que devuelve el backend en el estado local, en vez de asumir el cambio optimísticamente.
   const updateStatus = async (id: string, status: OrderStatus) => {
     try {
       const updated = await api.ordersUpdate(token, id, { status });
@@ -115,6 +122,8 @@ function AppStaffContent() {
     }
   };
 
+  // Asigna (o reprograma) el horario estimado de retiro de un pedido; el backend es quien pasa
+  // el estado a "Programado" como efecto de este cambio (ver updateOrder en server/src/orders).
   const assignTime = async (id: string, time: string) => {
     try {
       const updated = await api.ordersUpdate(token, id, { estimatedTime: time });

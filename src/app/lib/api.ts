@@ -13,6 +13,9 @@ export class ApiError extends Error {
   }
 }
 
+// Wrapper genérico de fetch: arma la URL completa contra API_URL, agrega el header
+// Authorization si se pasa un token, y parsea la respuesta como JSON, lanzando ApiError si el
+// status no es 2xx — así cada método de `api` no repite este manejo de error a mano.
 async function request<T>(path: string, options?: RequestInit & { token?: string }): Promise<T> {
   const { token, headers, ...rest } = options ?? {};
   let res: Response;
@@ -56,15 +59,22 @@ export type LoginResult = { token: string; user: UserProfile };
 
 export const api = {
   // ── Auth (pública la de login; el resto exige un token ya emitido) ─────────
+  // Login de staff: valida usuario/contraseña contra el backend y devuelve el token JWT + perfil.
   authLogin: (usuario: string, password: string) =>
     request<LoginResult>("/api/auth/login", { method: "POST", body: JSON.stringify({ usuario, password }) }),
+  // Recupera el perfil del dueño del token — lo usa AuthProvider para validar la sesión al montar.
   authMe: (token: string) => request<UserProfile>("/api/auth/me", { token }),
+  // Cierra la sesión del lado del cliente (no hay tabla de tokens revocados en el backend).
   authLogout: (token: string) => request<{ ok: boolean }>("/api/auth/logout", { method: "POST", token }),
 
   // ── Integraciones (solo-admin) ──────────────────────────────────────────────
+  // Consulta si la integración con FUDO está configurada y la fecha del último sync.
   fudoStatus: (token: string) => request<IntegrationStatus>("/api/fudo/status", { token }),
+  // Dispara una sincronización manual del catálogo de FUDO contra el backend.
   fudoSync: (token: string) => request<FudoSyncResult>("/api/fudo/sync", { method: "POST", token }),
+  // Consulta si la integración con el agente de WhatsApp está configurada.
   whatsappStatus: (token: string) => request<IntegrationStatus>("/api/whatsapp/status", { token }),
+  // Envía un mensaje de WhatsApp a un número puntual a través del agente.
   whatsappNotify: (token: string, to: string, message: string) =>
     request<{ sent: boolean }>("/api/whatsapp/notify", {
       method: "POST",
@@ -92,9 +102,12 @@ export const api = {
   },
   // Solo staff: expone nombre/teléfono de todos los clientes.
   ordersList: (token: string) => request<Order[]>("/api/orders", { token }),
+  // Actualiza estado y/o horario estimado de un pedido puntual, identificado por su id (uuid) —
+  // nunca por orderNumber, que puede repetirse entre jornadas comerciales distintas.
   ordersUpdate: (token: string, id: string, patch: UpdateOrderInput) =>
     request<Order>(`/api/orders/${id}`, { method: "PATCH", token, body: JSON.stringify(patch) }),
 
   // ── Reportes (solo-admin) ────────────────────────────────────────────────
+  // Trae el reporte mensual: total facturado, cantidad de pedidos y productos más vendidos.
   reportsMonthly: (token: string, month: string) => request<MonthlyReport>(`/api/reports/monthly?month=${month}`, { token }),
 };

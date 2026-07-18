@@ -27,6 +27,8 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
   const selected = orders.find(o => o.id === selectedId);
   const isReprogramming = !!(selected?.estimatedTime);
 
+  // Al elegir un pedido de la lista, precarga el form con su horario actual (si ya tiene uno)
+  // en vez de dejar el "12:00" por defecto, y limpia el motivo de una selección anterior.
   const handleSelect = (id: string) => {
     setSelectedId(id);
     setReason("");
@@ -34,6 +36,8 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
     setTime(o?.estimatedTime ?? "12:00");
   };
 
+  // Confirma la asignación/reprogramación: exige motivo solo cuando ya había un horario asignado
+  // (reprogramación), dispara el flash de éxito y limpia la selección para el próximo pedido.
   const handleConfirm = () => {
     if (!selectedId || !time) return;
     if (isReprogramming && !reason) return;

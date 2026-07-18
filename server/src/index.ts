@@ -14,6 +14,8 @@ const app = express();
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
 
+// Chequeo de salud del backend, público y sin dependencias (no toca la DB): solo confirma
+// que el proceso está arriba y respondiendo.
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);
 app.use("/api/fudo", fudoRouter);
@@ -32,6 +34,10 @@ const server = app.listen(config.port, () => {
   console.log(`Servidor escuchando en http://localhost:${config.port}`);
 });
 
+// Apagado prolijo: al recibir SIGINT/SIGTERM (Ctrl+C, o el que mande el proceso que
+// administre el deploy) deja de aceptar conexiones nuevas, y solo desconecta Prisma
+// (y recién ahí sale) una vez que el servidor terminó de cerrar, para no cortar
+// conexiones a la DB que todavía estén en uso por un request en curso.
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
     server.close(() => {

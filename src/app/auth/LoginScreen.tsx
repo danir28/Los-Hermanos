@@ -12,6 +12,9 @@ export function LoginScreen() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  // Intenta loguearse contra el backend vía AuthContext; si falla, muestra el mensaje de
+  // error devuelto (credenciales inválidas, usuario desactivado, etc.) en vez de dejar la
+  // pantalla sin feedback.
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setError(null);
