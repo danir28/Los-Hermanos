@@ -8,15 +8,17 @@ import { StatusBadge, TypePill, ConfirmDialog } from "../components/shared";
 // Listado completo de pedidos para recepción, con filtro por estado y cancelación de pedidos.
 export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]; onUpdateStatus: (id: string, status: OrderStatus) => void }) {
   const [filter, setFilter] = useState("Todos");
-  const [cancelTargetId, setCancelTargetId] = useState<string | null>(null);
+  // Se guarda el pedido completo (no solo el id) porque el diálogo necesita mostrar el número
+  // visible (orderNumber) además de mandar el id real a onUpdateStatus.
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
   const tabs: { key: string; label: string }[] = [
-    { key: "Todos",                label: "Todos"                },
     { key: "Pendiente",            label: "Pendiente"            },
     { key: "Programado",           label: "Programado"           },
     { key: "En preparación",       label: "En preparación"       },
     { key: "Listo para retirar",   label: "Listo para retirar"   },
     { key: "Entregado",            label: "Entregado"            },
     { key: "Cancelado",            label: "Cancelado"            },
+    { key: "Todos",                label: "Todos"                },
   ];
   const filtered = filter === "Todos" ? orders : orders.filter(o => o.status === filter);
 
@@ -48,7 +50,7 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
             <tbody className="divide-y divide-border">
               {filtered.map(order => (
                 <tr key={order.id} className={`transition-colors hover:bg-secondary/40 ${order.status === "Cancelado" ? "opacity-60" : ""}`}>
-                  <td className="px-4 py-3 font-mono font-bold text-primary">#{order.id}</td>
+                  <td className="px-4 py-3 font-mono font-bold text-primary">#{order.orderNumber}</td>
                   <td className="px-4 py-3 font-semibold whitespace-nowrap">{order.customer}</td>
                   <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{order.phone}</td>
                   <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{order.items.map(i => `${i.name} ×${i.qty}`).join(", ")}</td>
@@ -61,7 +63,7 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
                   <td className="px-4 py-3"><TypePill type={order.type} /></td>
                   <td className="px-4 py-3">
                     {CAN_CANCEL.includes(order.status) && (
-                      <button onClick={() => setCancelTargetId(order.id)}
+                      <button onClick={() => setCancelTarget(order)}
                         className="flex items-center gap-1 text-xs text-destructive border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors font-medium whitespace-nowrap">
                         <X size={12} /> Cancelar
                       </button>
@@ -77,13 +79,13 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
         </div>
       </div>
 
-      {cancelTargetId && (
+      {cancelTarget && (
         <ConfirmDialog
           title="¿Cancelar pedido?"
-          description={`Se cancelará el pedido #${cancelTargetId}. Esta acción no se puede deshacer.`}
+          description={`Se cancelará el pedido #${cancelTarget.orderNumber}. Esta acción no se puede deshacer.`}
           confirmLabel="Sí, cancelar"
-          onCancel={() => setCancelTargetId(null)}
-          onConfirm={() => { onUpdateStatus(cancelTargetId, "Cancelado"); setCancelTargetId(null); }}
+          onCancel={() => setCancelTarget(null)}
+          onConfirm={() => { onUpdateStatus(cancelTarget.id, "Cancelado"); setCancelTarget(null); }}
         />
       )}
     </div>

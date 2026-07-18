@@ -48,11 +48,19 @@ model WhatsappOutboundMessage {
 }
 
 // Pedido de un cliente: quién lo hizo, por qué canal (type), su estado actual y el
-// horario estimado que le asignó cocina. orderNumber es el correlativo visible en
-// toda la UI (ej. "001"); id interno queda como uuid, igual que el resto de los modelos.
+// horario estimado que le asignó cocina. id (uuid) es el identificador real, usado para
+// buscar/actualizar un pedido puntual (ver orders/service.ts#updateOrder). orderNumber es
+// el correlativo visible en la UI (ej. "007") y se reinicia cada jornada comercial — ya NO es
+// único en toda la base, solo dentro de una misma businessDate (ver @@unique de abajo y
+// orders/businessDay.ts). Nunca usar orderNumber solo para identificar un pedido puntual:
+// puede repetirse en otra jornada.
 model Order {
   id            String      @id @default(uuid())
-  orderNumber   Int         @unique @default(autoincrement())
+  orderNumber   Int
+  // Jornada comercial a la que pertenece el pedido (ver businessDayFor() en businessDay.ts):
+  // el local cierra pasada la medianoche, así que esto no es simplemente createdAt truncado
+  // a medianoche calendario, sino a las 7:00, hora en que se reinicia el contador.
+  businessDate  DateTime    @db.Date
   customer      String
   phone         String
   status        String
@@ -60,10 +68,24 @@ model Order {
   total         Decimal     @db.Decimal(10, 2)
   estimatedTime String?
   createdAt     DateTime    @default(now())
+  // Momento en que el pedido pasó a "Entregado" (no cuándo se creó) — es lo que permite
+  // distinguir "entregado hoy" de "entregado en algún momento", ver updateOrder().
+  deliveredAt   DateTime?
   items         OrderItem[]
 
+  @@unique([businessDate, orderNumber])
   @@index([createdAt])
   @@map("orders")
+}
+
+// Contador de pedidos de una jornada comercial: una fila por jornada, incrementada de forma
+// atómica (upsert con increment) en orders/service.ts#createOrder para asignar el próximo
+// orderNumber sin condiciones de carrera entre pedidos creados casi al mismo tiempo.
+model OrderCounter {
+  businessDate DateTime @id @db.Date
+  lastNumber   Int      @default(0)
+
+  @@map("order_counters")
 }
 
 // Ítem de un pedido: producto, cantidad y precio al momento de la compra (no el

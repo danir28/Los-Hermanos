@@ -59,7 +59,7 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
                 <button key={order.id} onClick={() => handleSelect(order.id)}
                   className={`w-full text-left p-4 rounded-2xl border transition-all ${selectedId === order.id ? "border-primary bg-primary/5 shadow-sm" : "border-border bg-card hover:border-primary/40"}`}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="font-mono font-bold text-primary">#{order.id}</span>
+                    <span className="font-mono font-bold text-primary">#{order.orderNumber}</span>
                     <div className="flex items-center gap-2">
                       {hasTime
                         ? <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">{order.estimatedTime} hs</span>
@@ -93,7 +93,7 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
               {/* Order summary */}
               <div className="bg-secondary rounded-xl p-4 mb-5">
                 <div className="flex justify-between items-start mb-2">
-                  <span className="font-mono font-bold text-primary text-lg">#{selected.id}</span>
+                  <span className="font-mono font-bold text-primary text-lg">#{selected.orderNumber}</span>
                   <TypePill type={selected.type} />
                 </div>
                 <p className="font-bold mb-1">{selected.customer}</p>

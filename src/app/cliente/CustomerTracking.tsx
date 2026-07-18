@@ -12,7 +12,7 @@ import { api } from "../lib/api";
 // GET /api/orders pasó a ser solo-staff (expondría nombre/teléfono de todos los clientes).
 export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
   const [searchType, setSearchType] = useState<"numero" | "telefono">("numero");
-  const [query, setQuery] = useState(preloadOrder?.id ?? "");
+  const [query, setQuery] = useState(preloadOrder?.orderNumber ?? "");
   const [searched, setSearched] = useState(!!preloadOrder);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<Order | "not-found" | null>(preloadOrder ?? null);
@@ -103,7 +103,7 @@ export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
         <div className="flex items-start justify-between gap-4 mb-3">
           <div>
             <p className="text-xs text-muted-foreground mb-0.5">Pedido</p>
-            <p className="font-mono font-bold text-3xl text-primary">#{order.id}</p>
+            <p className="font-mono font-bold text-3xl text-primary">#{order.orderNumber}</p>
           </div>
           <StatusBadge status={order.status} />
         </div>

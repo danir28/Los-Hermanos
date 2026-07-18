@@ -26,7 +26,7 @@ export function KitchenKanban({ orders, onUpdateStatus }: { orders: Order[]; onU
                   return (
                     <div key={order.id} className="bg-white rounded-xl border border-border p-3 shadow-sm hover:shadow-md transition-shadow">
                       <div className="flex justify-between items-center mb-1">
-                        <span className="font-mono font-bold text-primary">{order.id}</span>
+                        <span className="font-mono font-bold text-primary">{order.orderNumber}</span>
                         <span className="font-mono text-xs text-muted-foreground">{order.createdAt}</span>
                       </div>
                       <p className="font-semibold text-sm mb-1 truncate">{order.customer}</p>

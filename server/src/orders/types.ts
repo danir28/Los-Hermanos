@@ -15,10 +15,16 @@ export type UpdateOrderInput = {
   estimatedTime?: string;
 };
 
-// Forma de un pedido tal como la espera el frontend: id ya formateado ("001") y
-// createdAt ya como hora ("HH:MM"), igual que hoy vive en memoria en App.tsx.
+// Forma de un pedido tal como la espera el frontend. id es el identificador real (uuid) — lo
+// que hay que mandar para actualizar este pedido puntual, nunca se muestra en pantalla.
+// orderNumber es el número visible ya formateado ("007"), que se reinicia cada jornada
+// comercial y por lo tanto puede repetirse — solo sirve para mostrar, no para identificar.
+// createdAt ya viene como hora ("HH:MM"). deliveredAt es un ISO completo (con fecha) porque,
+// a diferencia de createdAt, el frontend necesita saber en qué día calendario cayó la
+// entrega para poder filtrar "entregados hoy".
 export type OrderDTO = {
   id: string;
+  orderNumber: string;
   customer: string;
   phone: string;
   items: OrderItemInput[];
@@ -27,4 +33,5 @@ export type OrderDTO = {
   estimatedTime: string | null;
   total: number;
   type: string;
+  deliveredAt: string | null;
 };

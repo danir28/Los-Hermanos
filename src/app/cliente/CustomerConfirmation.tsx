@@ -17,7 +17,7 @@ export function CustomerConfirmation({ order, onTrack }: { order: Order; onTrack
       <div className="bg-card border border-border rounded-2xl p-6 text-left mb-6">
         <div className="flex items-center justify-between mb-4 pb-4 border-b border-border">
           <span className="text-sm text-muted-foreground">Número de pedido</span>
-          <span className="font-mono font-bold text-2xl text-primary">#{order.id}</span>
+          <span className="font-mono font-bold text-2xl text-primary">#{order.orderNumber}</span>
         </div>
         <div className="mb-4"><StatusBadge status="Pendiente" /></div>
         <div className="space-y-1.5 mb-4">

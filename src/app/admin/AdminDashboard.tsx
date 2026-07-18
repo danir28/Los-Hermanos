@@ -63,7 +63,7 @@ export function AdminDashboard({ orders }: { orders: Order[] }) {
             {orders.slice(0, 6).map(order => (
               <div key={order.id} className="flex items-center justify-between py-2.5 gap-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="font-mono text-xs text-primary font-bold shrink-0">#{order.id}</span>
+                  <span className="font-mono text-xs text-primary font-bold shrink-0">#{order.orderNumber}</span>
                   <span className="text-sm font-medium truncate">{order.customer}</span>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">

@@ -45,7 +45,7 @@ export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssi
               <div className="flex items-start gap-4 flex-wrap">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2.5 flex-wrap mb-2">
-                    <span className="font-mono font-bold text-primary text-xl">#{order.id}</span>
+                    <span className="font-mono font-bold text-primary text-xl">#{order.orderNumber}</span>
                     <StatusBadge status={order.status} />
                     <TypePill type={order.type} />
                     <span className="text-xs bg-amber-100 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full font-semibold animate-pulse">Sin horario</span>

@@ -7,12 +7,17 @@ export type OrderStatus = "Pendiente" | "Programado" | "En preparación" | "List
 // Canal por el que se originó un pedido.
 export type OrderType = "online" | "presencial" | "telefónico" | "whatsapp";
 
-// Pedido completo con sus ítems, estado y datos del cliente.
+// Pedido completo con sus ítems, estado y datos del cliente. id es el identificador real (uuid)
+// — se usa para actualizar el pedido (onUpdateStatus, onAssigned, etc.), NUNCA se muestra en
+// pantalla. orderNumber es el número visible ("007") — se reinicia cada jornada comercial, así
+// que puede repetirse entre días distintos: solo sirve para mostrar, no para identificar un
+// pedido. deliveredAt (ISO completo, con fecha) es el momento real en que pasó a "Entregado" —
+// no confundir con createdAt, que solo trae la hora ("HH:MM") y es cuándo se creó el pedido.
 export type Order = {
-  id: string; customer: string; phone: string;
+  id: string; orderNumber: string; customer: string; phone: string;
   items: { name: string; qty: number; price: number }[];
   status: OrderStatus; createdAt: string; estimatedTime: string | null;
-  total: number; type: OrderType;
+  total: number; type: OrderType; deliveredAt: string | null;
 };
 
 // Producto del catálogo de la rotisería.

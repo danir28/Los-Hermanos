@@ -3,12 +3,20 @@ import type { Order, OrderStatus } from "../types";
 import { formatCurrency } from "../lib/format";
 import { TypePill } from "../components/shared";
 
+// Un pedido fue entregado "hoy" si deliveredAt cae en el día calendario actual (hora local) —
+// no alcanza con status === "Entregado", eso incluye pedidos entregados cualquier día anterior.
+function isToday(isoDate: string): boolean {
+  const d = new Date(isoDate);
+  const now = new Date();
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth() && d.getDate() === now.getDate();
+}
+
 // Dashboard de recepción: métricas rápidas y accesos directos a los pedidos más urgentes.
 export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { orders: Order[]; onNavigate: (v: string) => void; onUpdateStatus: (id: string, status: OrderStatus) => void }) {
   const pending    = orders.filter(o => o.status === "Pendiente");
   const programmed = orders.filter(o => o.status === "Programado");
   const ready      = orders.filter(o => o.status === "Listo para retirar");
-  const delivered  = orders.filter(o => o.status === "Entregado");
+  const deliveredToday = orders.filter(o => o.status === "Entregado" && o.deliveredAt && isToday(o.deliveredAt));
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -28,7 +36,7 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
           { label: "Pendientes",         value: pending.length,    color: "text-amber-600",  bg: "bg-amber-50 border-amber-200",  Icon: Clock        },
           { label: "Programados",        value: programmed.length, color: "text-blue-600",   bg: "bg-blue-50 border-blue-200",    Icon: Calendar     },
           { label: "Listos para retirar",value: ready.length,      color: "text-green-600",  bg: "bg-green-50 border-green-200",  Icon: CheckCircle  },
-          { label: "Entregados hoy",     value: delivered.length,  color: "text-gray-500",   bg: "bg-gray-50 border-gray-200",    Icon: Package      },
+          { label: "Entregados hoy",     value: deliveredToday.length, color: "text-gray-500", bg: "bg-gray-50 border-gray-200",    Icon: Package      },
         ].map(stat => (
           <div key={stat.label} className={`rounded-2xl border p-5 ${stat.bg}`}>
             <stat.Icon size={22} className={stat.color} />
@@ -48,7 +56,7 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
             <div className="w-1 self-stretch bg-amber-400 rounded-full shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="font-mono text-xs text-muted-foreground">#{order.id}</span>
+                <span className="font-mono text-xs text-muted-foreground">#{order.orderNumber}</span>
                 <span className="font-semibold text-sm">{order.customer}</span>
                 <TypePill type={order.type} />
               </div>
@@ -72,7 +80,7 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
             <div className="w-1 self-stretch bg-green-500 rounded-full shrink-0" />
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 flex-wrap mb-1">
-                <span className="font-mono text-xs text-muted-foreground">#{order.id}</span>
+                <span className="font-mono text-xs text-muted-foreground">#{order.orderNumber}</span>
                 <span className="font-semibold text-sm">{order.customer}</span>
                 <Phone size={12} className="text-muted-foreground" />
                 <span className="text-xs text-muted-foreground font-mono">{order.phone}</span>
