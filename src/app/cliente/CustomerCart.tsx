@@ -4,7 +4,9 @@ import type { CartItem } from "../types";
 import { formatCurrency } from "../lib/format";
 
 // Pantalla de carrito del cliente: edición de cantidades y confirmación del pedido con nombre y teléfono.
-export function CustomerCart({ cart, onUpdateCart, onConfirm }: { cart: CartItem[]; onUpdateCart: (id: number, delta: number) => void; onConfirm: (name: string, phone: string) => void }) {
+// isOpenNow llega calculado desde el backend (ver AppCliente.tsx); mientras no cargó todavía
+// (null) no se bloquea el botón, para no mostrar un falso "cerrado" en el primer render.
+export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: number, delta: number) => void; onConfirm: (name: string, phone: string) => void; isOpenNow: boolean | null }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -88,11 +90,17 @@ export function CustomerCart({ cart, onUpdateCart, onConfirm }: { cart: CartItem
               <Clock size={14} className="shrink-0 mt-0.5 text-amber-600" />
               <span>La cocina asignará el horario estimado de retiro. No seleccionás la hora — ellos te la informan.</span>
             </div>
+            {isOpenNow === false && (
+              <div className="mt-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex gap-2.5 leading-relaxed">
+                <Clock size={14} className="shrink-0 mt-0.5 text-red-600" />
+                <span>La rotisería está cerrada en este momento. Podés revisar el horario de atención en el inicio y volver a intentarlo cuando esté abierto.</span>
+              </div>
+            )}
           </div>
           <button onClick={() => name.trim() && phone.trim() && onConfirm(name.trim(), phone.trim())}
-            disabled={!name.trim() || !phone.trim()}
+            disabled={!name.trim() || !phone.trim() || isOpenNow === false}
             className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
-            Confirmar Pedido
+            {isOpenNow === false ? "Local cerrado" : "Confirmar Pedido"}
           </button>
         </div>
       </div>

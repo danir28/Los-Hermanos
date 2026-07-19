@@ -1,10 +1,40 @@
+import { Fragment } from "react";
 import { ShoppingCart, Clock, Phone, Flame } from "lucide-react";
 import { PRODUCTS } from "../data/products";
 import { formatCurrency } from "../lib/format";
+import type { BusinessHours, DaySchedule } from "../lib/api";
+
+// Orden de visualización (lunes a domingo) y abreviatura de cada día — dayOfWeek en los datos
+// sigue el criterio del backend (0=domingo..6=sábado, igual a Date#getDay()).
+const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
+const DAY_SHORT: Record<number, string> = { 0: "Dom", 1: "Lun", 2: "Mar", 3: "Mié", 4: "Jue", 5: "Vie", 6: "Sáb" };
+
+function sameSchedule(a: DaySchedule, b: DaySchedule): boolean {
+  return a.isOpen === b.isOpen && a.openTime === b.openTime && a.closeTime === b.closeTime;
+}
+
+// Agrupa días consecutivos (en orden lunes→domingo) con el mismo horario, para mostrar
+// "Lun–Vie 10:00–21:00" en vez de una línea por cada uno de los 7 días.
+function groupSchedule(days: DaySchedule[]): { label: string; text: string }[] {
+  const ordered = DISPLAY_ORDER.map(dow => days.find(d => d.dayOfWeek === dow)).filter((d): d is DaySchedule => !!d);
+  const groups: DaySchedule[][] = [];
+  for (const day of ordered) {
+    const lastGroup = groups[groups.length - 1];
+    if (lastGroup && sameSchedule(lastGroup[0], day)) lastGroup.push(day);
+    else groups.push([day]);
+  }
+  return groups.map(group => {
+    const first = group[0];
+    const last = group[group.length - 1];
+    const label = first.dayOfWeek === last.dayOfWeek ? DAY_SHORT[first.dayOfWeek] : `${DAY_SHORT[first.dayOfWeek]}–${DAY_SHORT[last.dayOfWeek]}`;
+    return { label, text: first.isOpen ? `${first.openTime} – ${first.closeTime}` : "Cerrado" };
+  });
+}
 
 // Pantalla de inicio del cliente: hero con horarios, categorías rápidas y productos destacados del día.
-export function CustomerHome({ onNavigate }: { onNavigate: (v: string) => void }) {
+export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: string) => void; businessHours: BusinessHours | null }) {
   const featured = PRODUCTS.filter(p => p.featured && p.active && !p.outOfStock);
+  const scheduleGroups = businessHours ? groupSchedule(businessHours.days) : [];
   return (
     <div>
       <div className="relative h-[500px] overflow-hidden">
@@ -29,13 +59,21 @@ export function CustomerHome({ onNavigate }: { onNavigate: (v: string) => void }
 
       <div className="bg-primary text-primary-foreground">
         <div className="max-w-6xl mx-auto px-6 py-3 flex flex-wrap items-center justify-center gap-x-8 gap-y-2 text-sm">
-          <div className="flex items-center gap-2"><Clock size={14} /><span className="opacity-80">Lun–Vie</span><span className="font-semibold">10:00 – 21:00</span></div>
-          <div className="hidden md:block w-px h-4 bg-white/25" />
-          <div className="flex items-center gap-2"><Clock size={14} /><span className="opacity-80">Sábado</span><span className="font-semibold">10:00 – 22:00</span></div>
-          <div className="hidden md:block w-px h-4 bg-white/25" />
-          <div className="flex items-center gap-2"><Clock size={14} /><span className="opacity-80">Domingo</span><span className="font-semibold">11:00 – 20:00</span></div>
+          {scheduleGroups.map((group, i) => (
+            <Fragment key={group.label}>
+              {i > 0 && <div className="hidden md:block w-px h-4 bg-white/25" />}
+              <div className="flex items-center gap-2">
+                <Clock size={14} /><span className="opacity-80">{group.label}</span><span className="font-semibold">{group.text}</span>
+              </div>
+            </Fragment>
+          ))}
           <div className="hidden md:block w-px h-4 bg-white/25" />
           <div className="flex items-center gap-2"><Phone size={14} /><span className="font-semibold">4521-8800</span></div>
+          {businessHours && (
+            <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${businessHours.isOpenNow ? "bg-white/20" : "bg-black/25"}`}>
+              {businessHours.isOpenNow ? "Abierto ahora" : "Cerrado ahora"}
+            </span>
+          )}
         </div>
       </div>
 

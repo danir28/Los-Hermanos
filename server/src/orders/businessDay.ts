@@ -18,3 +18,10 @@ export function businessDayFor(date: Date): Date {
   shifted.setUTCHours(0, 0, 0, 0);
   return shifted;
 }
+
+// Convierte "HH:mm hora Argentina" de una jornada comercial dada (el Date que devuelve
+// businessDayFor) a un instante UTC real. Reusado por businessHours/service.ts para no
+// reimplementar el manejo del offset fijo de Argentina en otro archivo.
+export function argentinaWallTimeToUtc(businessDate: Date, hours: number, minutes: number): Date {
+  return new Date(businessDate.getTime() - ARGENTINA_OFFSET_MS + hours * 3_600_000 + minutes * 60_000);
+}

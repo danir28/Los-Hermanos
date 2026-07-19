@@ -57,6 +57,11 @@ export type UserRole = "recepcionista" | "cocina" | "admin";
 export type UserProfile = { id: string; usuario: string; rol: UserRole; nombre: string; email: string; activo: boolean };
 export type LoginResult = { token: string; user: UserProfile };
 
+// Horario de un día de la semana (0=domingo..6=sábado, igual a Date#getDay()). openTime/closeTime
+// en formato "HH:mm"; si closeTime <= openTime el cierre cruza la medianoche (ver isOpenAt del backend).
+export type DaySchedule = { dayOfWeek: number; isOpen: boolean; openTime: string; closeTime: string };
+export type BusinessHours = { days: DaySchedule[]; isOpenNow: boolean };
+
 export const api = {
   // ── Auth (pública la de login; el resto exige un token ya emitido) ─────────
   // Login de staff: valida usuario/contraseña contra el backend y devuelve el token JWT + perfil.
@@ -112,4 +117,11 @@ export const api = {
   // ── Reportes (solo-admin) ────────────────────────────────────────────────
   // Trae el reporte mensual: total facturado, cantidad de pedidos y productos más vendidos.
   reportsMonthly: (token: string, month: string) => request<MonthlyReport>(`/api/reports/monthly?month=${month}`, { token }),
+
+  // ── Horario de atención ─────────────────────────────────────────────────
+  // Pública: la usa la Home del cliente para mostrar el horario y decidir si bloquea el checkout.
+  businessHoursGet: () => request<BusinessHours>("/api/business-hours"),
+  // Solo-admin: reemplaza el horario de la semana completa.
+  businessHoursUpdate: (token: string, days: DaySchedule[]) =>
+    request<BusinessHours>("/api/business-hours", { method: "PUT", token, body: JSON.stringify({ days }) }),
 };

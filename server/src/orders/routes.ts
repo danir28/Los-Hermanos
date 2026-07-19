@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../auth/middleware.js";
 import { asyncHandler } from "../lib/asyncHandler.js";
-import { createOrder, listOrders, lookupOrder, updateOrder, OrderNotFoundError } from "./service.js";
+import { createOrder, listOrders, lookupOrder, updateOrder, BusinessClosedError, OrderNotFoundError } from "./service.js";
 import type { CreateOrderInput, UpdateOrderInput } from "./types.js";
 
 export const ordersRouter = Router();
@@ -14,8 +14,16 @@ ordersRouter.post("/", asyncHandler(async (req, res) => {
     res.status(400).json({ error: 'Faltan datos del pedido ("customer", "phone", "type", "items")' });
     return;
   }
-  const order = await createOrder(body as CreateOrderInput);
-  res.json(order);
+  try {
+    const order = await createOrder(body as CreateOrderInput);
+    res.json(order);
+  } catch (err) {
+    if (err instanceof BusinessClosedError) {
+      res.status(409).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
 }));
 
 // Busca un único pedido por su número visible o por teléfono. Pública (la usa el

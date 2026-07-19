@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import type { NextFunction, Request, Response } from "express";
 import { authRouter } from "./auth/routes.js";
+import { businessHoursRouter } from "./businessHours/routes.js";
 import { config } from "./config.js";
 import { db } from "./db.js";
 import { fudoRouter } from "./integrations/fudo/routes.js";
@@ -18,6 +19,7 @@ app.use(express.json());
 // que el proceso está arriba y respondiendo.
 app.get("/api/health", (_req, res) => res.json({ ok: true }));
 app.use("/api/auth", authRouter);
+app.use("/api/business-hours", businessHoursRouter);
 app.use("/api/fudo", fudoRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/orders", ordersRouter);

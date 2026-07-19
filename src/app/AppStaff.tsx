@@ -8,7 +8,7 @@ import { api, type UserRole } from "./lib/api";
 import { AuthProvider, LoginScreen, useAuth } from "./auth";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
 import { KitchenPanel, KitchenAssign, KitchenKanban } from "./cocina";
-import { AdminDashboard, AdminIntegrations, AdminReports } from "./admin";
+import { AdminBusinessHours, AdminDashboard, AdminIntegrations, AdminReports } from "./admin";
 import { RoleNavTabs, type NavTab } from "./components/shared";
 
 // ─── App privada de staff ───────────────────────────────────────────────────
@@ -39,6 +39,7 @@ const KITCHEN_TABS: NavTab[] = [
 const ADMIN_TABS: NavTab[] = [
   { key: "dashboard",     label: "Dashboard",    Icon: BarChart3    },
   { key: "reportes",      label: "Reportes",     Icon: FileBarChart },
+  { key: "horarios",      label: "Horario",      Icon: Clock        },
   { key: "integraciones", label: "Integraciones",Icon: Plug         },
 ];
 
@@ -175,6 +176,7 @@ function AppStaffContent() {
           <RoleNavTabs tabs={ADMIN_TABS} active={staffView} onSelect={setStaffView} />
           {staffView === "dashboard"     && <AdminDashboard orders={orders} />}
           {staffView === "reportes"      && <AdminReports />}
+          {staffView === "horarios"      && <AdminBusinessHours />}
           {staffView === "integraciones" && <AdminIntegrations />}
         </>
       )}

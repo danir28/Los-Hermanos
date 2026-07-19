@@ -102,6 +102,22 @@ model OrderItem {
   @@map("order_items")
 }
 
+// Horario de atención del local, una fila por día de la semana (0=domingo..6=sábado,
+// mismo criterio que Date#getUTCDay()). Lo edita el admin (PUT /api/business-hours) y lo
+// lee el cliente (GET público) para mostrar el horario y bloquear el checkout online
+// fuera de horario. openTime/closeTime en formato "HH:mm"; si closeTime <= openTime se
+// interpreta que el cierre cruza la medianoche (ver isOpenAt en businessHours/service.ts),
+// igual que la rotisería ya opera hoy (abre hasta ~2am, ver orders/businessDay.ts).
+model BusinessHours {
+  dayOfWeek Int      @id
+  isOpen    Boolean  @default(true)
+  openTime  String
+  closeTime String
+  updatedAt DateTime @updatedAt
+
+  @@map("business_hours")
+}
+
 // Usuario interno (recepción, cocina, admin) con acceso a la app de staff. Alta solo por
 // script de seed en este sprint (sin pantalla CRUD todavía). rol queda como String, no enum
 // de Prisma, misma convención que Order.status/Order.type — los valores válidos

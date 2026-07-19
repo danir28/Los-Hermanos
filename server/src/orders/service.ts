@@ -1,3 +1,4 @@
+import { isBusinessOpenNow } from "../businessHours/service.js";
 import { db } from "../db.js";
 import type { Order, OrderItem } from "../generated/prisma/client.js";
 import { businessDayFor } from "./businessDay.js";
@@ -7,6 +8,17 @@ export class OrderNotFoundError extends Error {
   constructor(id: string) {
     super(`No existe el pedido #${id}`);
     this.name = "OrderNotFoundError";
+  }
+}
+
+// Se intentó crear un pedido online fuera del horario de atención configurado (ver
+// businessHours/service.ts#isBusinessOpenNow). Solo aplica a `type === "online"`: recepción
+// puede seguir cargando pedidos manualmente sin esta restricción (decisión explícita del
+// dueño del proyecto).
+export class BusinessClosedError extends Error {
+  constructor() {
+    super("La rotisería está cerrada en este momento. Podés hacer tu pedido en el horario de atención.");
+    this.name = "BusinessClosedError";
   }
 }
 
@@ -51,6 +63,10 @@ function toDTO(order: OrderWithItems): OrderDTO {
 // visible se asigna con un upsert atómico sobre OrderCounter (increment), para que dos pedidos
 // creados casi al mismo tiempo nunca se lleven el mismo número dentro de la misma jornada.
 export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
+  if (input.type === "online" && !(await isBusinessOpenNow())) {
+    throw new BusinessClosedError();
+  }
+
   const total = input.items.reduce((s, i) => s + i.price * i.qty, 0);
   const businessDate = businessDayFor(new Date());
 

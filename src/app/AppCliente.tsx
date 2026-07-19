@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import type { CartItem, Order, OrderType, Product } from "./types";
-import { api } from "./lib/api";
+import { api, type BusinessHours } from "./lib/api";
 import { CustomerHome, CustomerMenu, CustomerCart, CustomerConfirmation, CustomerTracking } from "./cliente";
 
 // ─── App pública de clientes ───────────────────────────────────────────────
@@ -16,6 +16,15 @@ export default function AppCliente() {
   const [customerView, setCustomerView] = useState("home");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
+  const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
+
+  // Horario de atención: se muestra en la Home y decide si se bloquea el checkout online (ver
+  // CustomerCart). Se recarga al entrar al carrito además de al montar, para no quedar
+  // desactualizado si el cliente dejó la pestaña abierta y el horario cambió (ej. cruzó la hora
+  // de cierre) mientras navegaba el menú.
+  const refreshBusinessHours = () => { api.businessHoursGet().then(setBusinessHours).catch(() => {}); };
+  useEffect(refreshBusinessHours, []);
+  useEffect(() => { if (customerView === "cart") refreshBusinessHours(); }, [customerView]);
 
   // Agrega un producto al carrito: si ya estaba, suma 1 a la cantidad existente en vez de duplicar la línea.
   const addToCart = (product: Product) => setCart(prev => {
@@ -55,9 +64,17 @@ export default function AppCliente() {
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
           <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest px-2">Rotisería Los Hermanos</p>
-          <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full font-medium">
-            <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Abierto
-          </div>
+          {businessHours && (
+            businessHours.isOpenNow ? (
+              <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full font-medium">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full" /> Abierto
+              </div>
+            ) : (
+              <div className="flex items-center gap-1.5 text-xs text-red-700 bg-red-50 border border-red-200 px-2.5 py-1 rounded-full font-medium">
+                <span className="w-1.5 h-1.5 bg-red-500 rounded-full" /> Cerrado
+              </div>
+            )
+          )}
         </div>
       </div>
 
@@ -82,9 +99,9 @@ export default function AppCliente() {
         </div>
       </nav>
 
-      {customerView === "home"         && <CustomerHome onNavigate={setCustomerView} />}
+      {customerView === "home"         && <CustomerHome onNavigate={setCustomerView} businessHours={businessHours} />}
       {customerView === "menu"         && <CustomerMenu cart={cart} onAddToCart={addToCart} onNavigate={setCustomerView} />}
-      {customerView === "cart"         && <CustomerCart cart={cart} onUpdateCart={updateCart} onConfirm={confirmOrder} />}
+      {customerView === "cart"         && <CustomerCart cart={cart} onUpdateCart={updateCart} onConfirm={confirmOrder} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
       {customerView === "confirmation" && confirmedOrder && <CustomerConfirmation order={confirmedOrder} onTrack={() => setCustomerView("tracking")} />}
       {customerView === "tracking"     && <CustomerTracking preloadOrder={confirmedOrder ?? undefined} />}
     </div>
