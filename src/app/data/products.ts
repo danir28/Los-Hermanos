@@ -1,18 +1,113 @@
 import type { Product } from "../types";
 
-// Catálogo de productos de la rotisería (hardcodeado, todavía no viene del backend).
+// Catálogo real de "Los Hermanos", relevado de la carta física del local (fotos del 2026-07-18).
+// Los precios de la carta impresa se actualizan con stickers a mano y no son la fuente de verdad
+// definitiva (eso será FUDO cuando se conecte la integración) — sirven como base real mientras tanto.
 export const PRODUCTS: Product[] = [
-  { id: 1,  name: "Pollo Entero",        category: "Pollo",       price: 4500, description: "Pollo a la brasa marinado con chimichurri casero y especias criollas",              image: "https://images.unsplash.com/photo-1598103442097-8b74394b95c2?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
-  { id: 2,  name: "Medio Pollo",         category: "Pollo",       price: 2400, description: "Mitad de pollo a la brasa, dorado y jugoso por dentro",                             image: "https://images.unsplash.com/photo-1567620832903-9fc6debc209f?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
-  { id: 3,  name: "Cuarto de Pollo",     category: "Pollo",       price: 1300, description: "Cuarto de pollo con salsa criolla incluida",                                        image: "https://images.unsplash.com/photo-1574672280600-4accfa5b6f98?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
-  { id: 4,  name: "Ensalada Mixta",      category: "Ensaladas",   price: 800,  description: "Lechuga, tomate, zanahoria rallada y aderezo de la casa",                          image: "https://images.unsplash.com/photo-1512621776951-a57141f2eefd?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
-  { id: 5,  name: "Papas Fritas",        category: "Guarniciones", price: 700,  description: "Papas fritas crocantes con sal marina gruesa",                                     image: "https://images.unsplash.com/photo-1573080496219-bb964701c394?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
-  { id: 6,  name: "Empanada de Carne",   category: "Empanadas",   price: 380,  description: "Carne cortada a cuchillo con huevo duro, aceitunas y cebolla",                     image: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
-  { id: 7,  name: "Empanada de Pollo",   category: "Empanadas",   price: 380,  description: "Pollo desmenuzado con morrón, cebolla y especias seleccionadas",                   image: "https://images.unsplash.com/photo-1565299585323-38d6b0865b47?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: false },
-  { id: 8,  name: "Milanesa Napolitana", category: "Especiales",  price: 3200, description: "Milanesa de ternera con salsa de tomate, jamón y mozzarella gratinada",            image: "https://images.unsplash.com/photo-1585703900468-13b01e9f8b94?w=400&h=300&fit=crop&auto=format", featured: true,  active: true,  outOfStock: false },
-  { id: 9,  name: "Provoleta",           category: "Especiales",  price: 1200, description: "Provolone a la plancha con orégano y aceite de oliva extra virgen",                image: "https://images.unsplash.com/photo-1513104890138-7c749659a591?w=400&h=300&fit=crop&auto=format", featured: false, active: true,  outOfStock: true  },
-  { id: 10, name: "Ensalada César",      category: "Ensaladas",   price: 1100, description: "Lechuga romana, crutones artesanales, parmesano y aderezo césar",                  image: "https://images.unsplash.com/photo-1550304943-4f24f54ddde9?w=400&h=300&fit=crop&auto=format", featured: false, active: false, outOfStock: false },
+  // Tablas calientes: picada de milanesas, papas fritas, tostados, pizza y empanadas, por cantidad de personas
+  { id: 1, name: "Tabla caliente para 2", category: "Tablas calientes", price: 36000, description: "Picada de milanesas, papas fritas, tostados, pizza y empanadas para 2 personas", image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 2, name: "Tabla caliente para 3", category: "Tablas calientes", price: 45000, description: "Picada de milanesas, papas fritas, tostados, pizza y empanadas para 3 personas", image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 3, name: "Tabla caliente para 4", category: "Tablas calientes", price: 50000, description: "Picada de milanesas, papas fritas, tostados, pizza y empanadas para 4 personas", image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop&auto=format", featured: true,  active: true, outOfStock: false },
+  { id: 4, name: "Tabla caliente para 5", category: "Tablas calientes", price: 55000, description: "Picada de milanesas, papas fritas, tostados, pizza y empanadas para 5 personas", image: "https://images.unsplash.com/photo-1544025162-d76694265947?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Pizzas
+  { id: 5,  name: "Pizza Muzzarella", category: "Pizzas", price: 17000, description: "Salsa y muzzarella",                                    image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 6,  name: "Pizza Especial",   category: "Pizzas", price: 19000, description: "Salsa, jamón, huevo, morrón y aceitunas",               image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop&auto=format", featured: true,  active: true, outOfStock: false },
+  { id: 7,  name: "Pizza Calabresa",  category: "Pizzas", price: 20000, description: "Salsa y chorizo",                                        image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 8,  name: "Pizza Napolitana", category: "Pizzas", price: 20000, description: "Salsa, jamón, tomate y aceitunas",                       image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 9,  name: "Pizza Roquefort",  category: "Pizzas", price: 20000, description: "Salsa y roquefort",                                      image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 10, name: "Pizza Super",      category: "Pizzas", price: 22000, description: "Salsa, huevo frito y papas fritas",                      image: "https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Hamburguesas
+  { id: 11, name: "Hamburguesa común",   category: "Hamburguesas", price: 12000, description: "Con fritas, lechuga y tomate",                                    image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 12, name: "Hamburguesa completa", category: "Hamburguesas", price: 15000, description: "Con fritas, lechuga, tomate, jamón, queso y huevo",                image: "https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop&auto=format", featured: true,  active: true, outOfStock: false },
+
+  // Empanadas: carne dulce, carne salada, jamón y queso, o pollo (a elección), por cantidad
+  { id: 13, name: "Empanadas (unidad)",       category: "Empanadas", price: 2500,  description: "Carne dulce, carne salada, jamón y queso o pollo",  image: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 14, name: "Empanadas (media docena)", category: "Empanadas", price: 15000, description: "Carne dulce, carne salada, jamón y queso o pollo",  image: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 15, name: "Empanadas (docena)",       category: "Empanadas", price: 26000, description: "Carne dulce, carne salada, jamón y queso o pollo",  image: "https://images.unsplash.com/photo-1569050467447-ce54b3bbc37d?w=400&h=300&fit=crop&auto=format", featured: true,  active: true, outOfStock: false },
+
+  // Sandwiches de milanesa: común o especial, entero o al medio
+  { id: 16, name: "Sandwich de milanesa común (entero)",     category: "Sandwiches de milanesa", price: 22000, description: "Lechuga y tomate",                                    image: "https://images.unsplash.com/photo-1550317138-10000687a72b?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 17, name: "Sandwich de milanesa común (medio)",      category: "Sandwiches de milanesa", price: 11000, description: "Lechuga y tomate",                                    image: "https://images.unsplash.com/photo-1550317138-10000687a72b?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 18, name: "Sandwich de milanesa especial (entero)",  category: "Sandwiches de milanesa", price: 26000, description: "Lechuga, tomate, jamón, queso y huevo",               image: "https://images.unsplash.com/photo-1550317138-10000687a72b?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 19, name: "Sandwich de milanesa especial (medio)",   category: "Sandwiches de milanesa", price: 14000, description: "Lechuga, tomate, jamón, queso y huevo",               image: "https://images.unsplash.com/photo-1550317138-10000687a72b?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Milanesa al plato
+  { id: 20, name: "Milanesa con fritas",           category: "Milanesa al plato", price: 14000, description: "Milanesa al plato con papas fritas",                     image: "https://images.unsplash.com/photo-1585703900468-13b01e9f8b94?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 21, name: "Milanesa a la pizza con fritas", category: "Milanesa al plato", price: 16000, description: "Milanesa a la pizza, con papas fritas",                   image: "https://images.unsplash.com/photo-1585703900468-13b01e9f8b94?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 22, name: "Milanesa a la napolitana",       category: "Milanesa al plato", price: 16000, description: "Milanesa a la napolitana, con papas fritas",              image: "https://images.unsplash.com/photo-1585703900468-13b01e9f8b94?w=400&h=300&fit=crop&auto=format", featured: true,  active: true, outOfStock: false },
+
+  // Pastas: ravioles o tallarines, con salsa bolognesa o queso y crema (a elección)
+  { id: 23, name: "Ravioles de carne y verdura", category: "Pastas", price: 16000, description: "Con salsa bolognesa o queso y crema", image: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 24, name: "Tallarines",                  category: "Pastas", price: 16000, description: "Con salsa bolognesa o queso y crema", image: "https://images.unsplash.com/photo-1551183053-bf91a1d81141?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Comidas frías (solo los ítems con precio confirmado en la carta; Lengua a la vinagreta,
+  // Huevos rellenos y Vitel Toné quedan afuera hasta tener su precio)
+  { id: 25, name: "Sandwich de miga - Jamón y queso", category: "Comidas frías", price: 12000, description: "Sandwich de miga de jamón y queso",       image: "https://images.unsplash.com/photo-1567234669003-dce7a7a88821?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 26, name: "Sandwich de miga - Verdura",       category: "Comidas frías", price: 11000, description: "Sandwich de miga de verdura",             image: "https://images.unsplash.com/photo-1567234669003-dce7a7a88821?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 27, name: "Picada de fiambres (para 2)",      category: "Comidas frías", price: 15000, description: "Picada de fiambres para 2 personas",       image: "https://images.unsplash.com/photo-1567234669003-dce7a7a88821?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Guarniciones / más opciones (Fritas para 2 y Tortitas quedan afuera hasta tener su precio)
+  { id: 28, name: "Carlitos",     category: "Guarniciones", price: 1000, description: "Porción de carlitos",     image: "https://images.unsplash.com/photo-1573080496219-bb964701c394?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 29, name: "Papas fritas", category: "Guarniciones", price: 8000, description: "Porción de papas fritas", image: "https://images.unsplash.com/photo-1573080496219-bb964701c394?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Gaseosas: 500cc o 1.75L
+  { id: 30, name: "Pepsi 500cc",             category: "Gaseosas", price: 3500, description: "Botella de 500cc",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 31, name: "Seven Up 500cc",          category: "Gaseosas", price: 3500, description: "Botella de 500cc",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 32, name: "Mirinda 500cc",           category: "Gaseosas", price: 3500, description: "Botella de 500cc",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 33, name: "Paso de los Toros 500cc", category: "Gaseosas", price: 3500, description: "Botella de 500cc",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 34, name: "Agua saborizada 500cc",   category: "Gaseosas", price: 3500, description: "Manzana, pomelo rosado o limonada — botella de 500cc",    image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 35, name: "Pepsi 1.75L",             category: "Gaseosas", price: 6000, description: "Botella de 1.75L",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 36, name: "Seven Up 1.75L",          category: "Gaseosas", price: 6000, description: "Botella de 1.75L",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 37, name: "Mirinda 1.75L",           category: "Gaseosas", price: 6000, description: "Botella de 1.75L",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 38, name: "Paso de los Toros 1.75L", category: "Gaseosas", price: 6000, description: "Botella de 1.75L",                                        image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 39, name: "Agua saborizada 1.75L",   category: "Gaseosas", price: 6000, description: "Manzana, pomelo rosado o limonada — botella de 1.75L",    image: "https://images.unsplash.com/photo-1554866585-cd94860890b7?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Cervezas: en lata, botella o litro
+  { id: 40, name: "Quilmes Stout (lata)",   category: "Cervezas", price: 3500,  description: "Lata",              image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 41, name: "Stella Artois (lata)",   category: "Cervezas", price: 4500,  description: "Lata",              image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 42, name: "Budweiser (lata)",       category: "Cervezas", price: 3500,  description: "Lata",              image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 43, name: "Corona (botella 330cc)", category: "Cervezas", price: 4500,  description: "Botella de 330cc",  image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 44, name: "Corona (litro)",         category: "Cervezas", price: 10000, description: "Botella de litro", image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 45, name: "Budweiser (litro)",      category: "Cervezas", price: 8000,  description: "Botella de litro", image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 46, name: "Stella Artois (litro)",  category: "Cervezas", price: 10000, description: "Botella de litro", image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 47, name: "Quilmes Stout (litro)",  category: "Cervezas", price: 8000,  description: "Botella de litro", image: "https://images.unsplash.com/photo-1608270586620-248524c67de9?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Vinos
+  { id: 48, name: "Novecento Malbec",         category: "Vinos", price: 8000,  description: "Vino tinto Malbec",              image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 49, name: "Otro Loco Más",            category: "Vinos", price: 12000, description: "Tinto o blanco",                 image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 50, name: "Santa Julia Chenin Dulce", category: "Vinos", price: 12000, description: "Vino blanco dulce",              image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 51, name: "Santa Julia (3/8)",        category: "Vinos", price: 7000,  description: "Botella chica (3/8)",            image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 52, name: "Santa Julia",              category: "Vinos", price: 12000, description: "Botella",                       image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 53, name: "Dante Robino",             category: "Vinos", price: 12000, description: "Botella",                       image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 54, name: "Trumpeter",                category: "Vinos", price: 18000, description: "Botella",                       image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 55, name: "Dada Espumante",           category: "Vinos", price: 15000, description: "Vino espumante",                 image: "https://images.unsplash.com/photo-1510812431401-41d2bd2722f3?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+
+  // Aperitivos: por vaso o por jarra
+  { id: 56, name: "Vaso de Fernet",   category: "Aperitivos", price: 4000,  description: "Fernet por vaso",   image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 57, name: "Vaso de Gancia",   category: "Aperitivos", price: 4000,  description: "Gancia por vaso",   image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 58, name: "Vaso de Campari",  category: "Aperitivos", price: 4000,  description: "Campari por vaso",  image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 59, name: "Jarra de Fernet",  category: "Aperitivos", price: 15000, description: "Fernet por jarra",  image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 60, name: "Jarra de Gancia",  category: "Aperitivos", price: 12000, description: "Gancia por jarra",  image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
+  { id: 61, name: "Jarra de Campari", category: "Aperitivos", price: 12000, description: "Campari por jarra", image: "https://images.unsplash.com/photo-1470337458703-46ad1756a187?w=400&h=300&fit=crop&auto=format", featured: false, active: true, outOfStock: false },
 ];
 
-// Categorías disponibles para filtrar el catálogo, incluyendo "Todos".
-export const CATEGORIES = ["Todos", "Pollo", "Ensaladas", "Guarniciones", "Empanadas", "Especiales"];
+// Categorías disponibles para filtrar el catálogo, incluyendo "Todos" (siempre primera:
+// CustomerMenu y ReceptionistCreateOrder comparan contra el literal "Todos").
+export const CATEGORIES = [
+  "Todos",
+  "Tablas calientes",
+  "Pizzas",
+  "Hamburguesas",
+  "Empanadas",
+  "Sandwiches de milanesa",
+  "Milanesa al plato",
+  "Pastas",
+  "Comidas frías",
+  "Guarniciones",
+  "Gaseosas",
+  "Cervezas",
+  "Vinos",
+  "Aperitivos",
+];
