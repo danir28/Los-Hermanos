@@ -1,0 +1,57 @@
+/* Ticket de comanda (ver src/app/components/shared/OrderTicket.tsx). Oculto en pantalla normal;
+   solo visible al imprimir. Técnica clásica de "imprimir un único elemento": se oculta todo lo
+   demás por visibilidad (no display, para no alterar el layout del resto de la página) y se
+   posiciona el ticket en absoluto arriba a la izquierda de la hoja impresa.
+   Ancho asumido 80mm (rollo térmico típico de comanda) — a confirmar contra la impresora real
+   del local antes de dar el detalle visual por cerrado. */
+
+.order-ticket {
+  display: none;
+}
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .order-ticket,
+  .order-ticket * {
+    visibility: visible;
+  }
+
+  .order-ticket {
+    display: block;
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 80mm;
+    padding: 4mm;
+    font-family: 'Courier New', monospace;
+    font-size: 11px;
+    line-height: 1.4;
+  }
+
+  .order-ticket-title {
+    font-weight: bold;
+    text-align: center;
+    font-size: 13px;
+    margin-bottom: 6px;
+  }
+
+  .order-ticket-line {
+    display: flex;
+    justify-content: space-between;
+    gap: 8px;
+  }
+
+  .order-ticket-total {
+    font-weight: bold;
+    margin-top: 6px;
+  }
+
+  .order-ticket-footer {
+    text-align: center;
+    font-size: 9px;
+    margin-top: 8px;
+  }
+}

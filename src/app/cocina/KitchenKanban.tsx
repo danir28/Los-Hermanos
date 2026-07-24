@@ -1,6 +1,7 @@
 import { Clock } from "lucide-react";
 import type { Order, OrderStatus } from "../types";
 import { STATUS } from "../data/statusConfig";
+import { formatTimeLabel } from "../lib/time";
 import { AgeIndicator } from "./AgeIndicator";
 import { KANBAN_COLS, NEXT_STATES } from "./kanbanConfig";
 
@@ -42,7 +43,7 @@ export function KitchenKanban({ orders, onUpdateStatus }: { orders: Order[]; onU
                       </div>
                       {order.estimatedTime && (
                         <p className="text-xs text-muted-foreground mb-2 flex items-center gap-1">
-                          <Clock size={10} />{order.estimatedTime} hs
+                          <Clock size={10} />{formatTimeLabel(order.estimatedTime!)}
                         </p>
                       )}
                       <div className="space-y-1.5">

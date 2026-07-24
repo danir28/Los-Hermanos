@@ -1,12 +1,16 @@
 // Ítem de un pedido tal como lo mandan el frontend o lo devuelve la API.
 export type OrderItemInput = { name: string; qty: number; price: number };
 
-// Datos necesarios para crear un pedido nuevo (cliente, recepción).
+// Datos necesarios para crear un pedido nuevo (cliente, recepción, cocina). estimatedTime es el
+// turno de retiro elegido en el momento de crear el pedido (ver orders/slots.ts) — opcional: si
+// todos los turnos visibles están llenos, recepción/cocina puede cargar el pedido igual sin
+// horario (nace "Pendiente", como antes de este cambio) y reprogramarlo después.
 export type CreateOrderInput = {
   customer: string;
   phone: string;
   items: OrderItemInput[];
   type: string;
+  estimatedTime?: string;
 };
 
 // Cambios posibles sobre un pedido existente: avanzar/cancelar estado, o asignarle horario.

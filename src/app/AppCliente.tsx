@@ -39,15 +39,19 @@ export default function AppCliente() {
   );
 
   // Crea el pedido en el backend (checkout) y lo guarda para mostrar la confirmación y
-  // precargar el seguimiento, sin necesidad de un segundo pedido al servidor. Si falla
-  // (ej. el servidor no responde), avisa con un alert y se queda en el carrito para reintentar.
-  const confirmOrder = async (name: string, phone: string) => {
+  // precargar el seguimiento, sin necesidad de un segundo pedido al servidor. estimatedTime es
+  // el turno de retiro elegido en el SlotPicker de CustomerCart — a diferencia de la carga
+  // manual de staff, acá SÍ es obligatorio (el cliente no tiene forma de "avisar después" si
+  // queda sin horario). Si falla (turno lleno, servidor no responde), avisa con un alert y se
+  // queda en el carrito para reintentar.
+  const confirmOrder = async (name: string, phone: string, estimatedTime: string) => {
     try {
       const newOrder = await api.ordersCreate({
         customer: name,
         phone,
         items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
         type: "online" as OrderType,
+        estimatedTime,
       });
       setConfirmedOrder(newOrder);
       setCart([]);

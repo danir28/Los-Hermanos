@@ -5,6 +5,7 @@ import { STATUS } from "../data/statusConfig";
 import { StatusBadge, TypePill } from "../components/shared";
 import { STATUS_MESSAGES } from "./statusMessages";
 import { api } from "../lib/api";
+import { formatTimeLabel } from "../lib/time";
 
 // Pantalla de seguimiento de pedido: buscar por número o teléfono y ver la línea de tiempo del estado.
 // Busca contra GET /api/orders/lookup (pública, devuelve un único pedido) en vez de filtrar un
@@ -117,7 +118,7 @@ export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
         </div>
         <div className="flex items-center gap-2 mb-4 text-xs text-muted-foreground">
           <Clock size={12} />
-          <span>Ingresó a las {order.createdAt} hs</span>
+          <span>Ingresó a las {formatTimeLabel(order.createdAt)}</span>
           <span>·</span>
           <TypePill type={order.type} />
         </div>
@@ -129,8 +130,8 @@ export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
               <Clock size={18} className="text-primary-foreground" />
             </div>
             <div>
-              <p className="text-xs text-muted-foreground">Horario estimado de retiro</p>
-              <p className="font-mono font-bold text-2xl text-foreground">{order.estimatedTime} hs</p>
+              <p className="text-xs text-muted-foreground">Horario de retiro</p>
+              <p className="font-mono font-bold text-2xl text-foreground">{formatTimeLabel(order.estimatedTime!)}</p>
             </div>
           </div>
         )}

@@ -1,6 +1,7 @@
 import { Clock, CheckCircle, Package, Phone, PlusCircle, Calendar } from "lucide-react";
 import type { Order, OrderStatus } from "../types";
 import { formatCurrency } from "../lib/format";
+import { formatTimeLabel } from "../lib/time";
 import { TypePill } from "../components/shared";
 
 // Un pedido fue entregado "hoy" si deliveredAt cae en el día calendario actual (hora local) —
@@ -64,7 +65,7 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
             </div>
             <div className="text-right shrink-0">
               <p className="font-mono font-bold">{formatCurrency(order.total)}</p>
-              <p className="text-xs text-muted-foreground font-mono mt-0.5">{order.createdAt} hs</p>
+              <p className="text-xs text-muted-foreground font-mono mt-0.5">{formatTimeLabel(order.createdAt)}</p>
             </div>
           </div>
         ))}
@@ -88,7 +89,7 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
               <p className="text-xs text-muted-foreground">{order.items.map(i => `${i.name} ×${i.qty}`).join(" · ")}</p>
             </div>
             <div className="text-right shrink-0">
-              <p className="text-sm font-semibold text-green-700">Retiro: {order.estimatedTime} hs</p>
+              <p className="text-sm font-semibold text-green-700">Retiro: {formatTimeLabel(order.estimatedTime!)}</p>
               <button onClick={() => onUpdateStatus(order.id, "Entregado")}
                 className="mt-1.5 text-xs bg-green-500 text-white px-3 py-1 rounded-full hover:bg-green-600 transition-colors font-medium">
                 ✓ Marcar entregado

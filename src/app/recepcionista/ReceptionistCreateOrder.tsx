@@ -3,17 +3,22 @@ import { Search, CheckCircle, Plus, Minus, X } from "lucide-react";
 import type { CartItem, OrderType, Product } from "../types";
 import { PRODUCTS, CATEGORIES } from "../data/products";
 import { formatCurrency } from "../lib/format";
-import { ConfirmDialog } from "../components/shared";
+import { ConfirmDialog, SlotPicker } from "../components/shared";
 
-// Datos del pedido que arma este formulario, para que App.tsx lo cree en el estado compartido de orders.
-type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; type: OrderType };
+// Datos del pedido que arma este formulario, para que AppStaff.tsx lo cree en el estado
+// compartido de orders. estimatedTime es opcional: si todos los turnos visibles están llenos,
+// se puede confirmar igual sin horario (cocina lo reprograma después, ver KitchenAssign).
+type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string | null };
 
-// Formulario de carga manual de pedidos por parte de recepción (pedidos telefónicos o presenciales).
+// Formulario de carga manual de pedidos por parte de recepción o cocina (pedidos telefónicos o
+// presenciales) — 100% agnóstico de rol, solo recibe onConfirm, por eso lo reusa también cocina.
 export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewReceptionistOrder) => void }) {
   const [orderCart, setOrderCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [orderType, setOrderType] = useState<"presencial" | "telefónico">("presencial");
+  const [time, setTime] = useState<string | null>(null);
+  const [refreshSignal, setRefreshSignal] = useState(0);
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("Todos");
   const [confirmed, setConfirmed] = useState(false);
@@ -42,19 +47,24 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
 
   // Valida que haya productos y datos del cliente cargados, muestra el cartel de "registrado"
   // y recién después de una breve animación (1.2s) llama a onConfirm con el pedido armado —
-  // así App.tsx lo crea en el backend sin que se sienta instantáneo/brusco para quien lo carga.
+  // así AppStaff.tsx lo crea en el backend sin que se sienta instantáneo/brusco para quien lo
+  // carga. El horario NO es obligatorio acá (a diferencia del checkout online del cliente): si
+  // todos los turnos visibles están llenos, igual se puede cargar el pedido sin horario y
+  // reprogramarlo después desde cocina (ver KitchenAssign) — quien atiende el teléfono no
+  // debería quedar trabado si la grilla está completa.
   const handleConfirm = () => {
     if (!orderCart.length || !name || !phone) return;
     setConfirmed(true);
     setTimeout(() => {
       setConfirmed(false);
-      onConfirm({ customer: name, phone, items: orderCart, type: orderType });
+      onConfirm({ customer: name, phone, items: orderCart, type: orderType, estimatedTime: time });
+      setRefreshSignal(s => s + 1);
     }, 1200);
   };
 
-  // Descarta el pedido en carga: vacía carrito, datos del cliente y cierra el diálogo de confirmación.
+  // Descarta el pedido en carga: vacía carrito, datos del cliente, horario, y cierra el diálogo de confirmación.
   const handleCancel = () => {
-    setOrderCart([]); setName(""); setPhone(""); setShowCancelConfirm(false);
+    setOrderCart([]); setName(""); setPhone(""); setTime(null); setShowCancelConfirm(false);
   };
 
   const CHANNEL_OPTIONS: { key: "presencial" | "telefónico"; label: string; emoji: string }[] = [
@@ -148,6 +158,12 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
                 </label>
               ))}
             </div>
+          </div>
+
+          {/* Time slot */}
+          <div className="bg-card border border-border rounded-2xl p-4">
+            <SlotPicker value={time} onChange={setTime} refreshSignal={refreshSignal} required={false} />
+            {!time && <p className="text-xs text-muted-foreground mt-1">Opcional: si no hay turnos libres, se puede cargar igual y reprogramar después.</p>}
           </div>
 
           {/* Customer data */}

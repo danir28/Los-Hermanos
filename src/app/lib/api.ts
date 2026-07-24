@@ -47,8 +47,13 @@ export type CreateOrderInput = {
   phone: string;
   items: { name: string; qty: number; price: number }[];
   type: OrderType;
+  estimatedTime?: string;
 };
 export type UpdateOrderInput = { status?: OrderStatus; estimatedTime?: string };
+
+// Disponibilidad de un turno de retiro (ver SLOT_* en server/src/orders/slots.ts): cuántos
+// pedidos ya lo ocuparon sobre el cupo máximo, si ya pasó, y si todavía se puede elegir.
+export type SlotAvailability = { time: string; taken: number; capacity: number; isPast: boolean; available: boolean };
 export type TopProduct = { name: string; qty: number; revenue: number };
 export type MonthlyReport = { month: string; totalSales: number; orderCount: number; topProducts: TopProduct[] };
 export type LookupOrderInput = { orderNumber: string } | { phone: string };
@@ -91,6 +96,9 @@ export const api = {
   // Pública: la usan tanto el cliente (checkout) como recepción (alta manual).
   ordersCreate: (input: CreateOrderInput) =>
     request<Order>("/api/orders", { method: "POST", body: JSON.stringify(input) }),
+  // Pública: disponibilidad de los turnos de retiro de la jornada comercial en curso, la
+  // consume el SlotPicker tanto en el checkout del cliente como en la carga manual de staff.
+  ordersSlots: () => request<SlotAvailability[]>("/api/orders/slots"),
   // Pública: la usa el cliente para seguimiento. Devuelve null en vez de tirar
   // cuando no hay match (404), para que el llamador no tenga que distinguir
   // "no encontrado" de un error real del servidor.

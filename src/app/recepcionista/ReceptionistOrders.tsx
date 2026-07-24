@@ -2,6 +2,7 @@ import { useState } from "react";
 import { X } from "lucide-react";
 import type { Order, OrderStatus } from "../types";
 import { formatCurrency } from "../lib/format";
+import { formatTimeLabel } from "../lib/time";
 import { CAN_CANCEL } from "../data/statusConfig";
 import { StatusBadge, TypePill, ConfirmDialog } from "../components/shared";
 
@@ -58,9 +59,9 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
                   <td className="px-4 py-3 font-mono font-bold whitespace-nowrap">{formatCurrency(order.total)}</td>
                   <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={order.status} /></td>
                   <td className="px-4 py-3 font-mono text-sm whitespace-nowrap">
-                    {order.estimatedTime ? `${order.estimatedTime} hs` : <span className="text-muted-foreground">—</span>}
+                    {order.estimatedTime ? formatTimeLabel(order.estimatedTime) : <span className="text-muted-foreground">—</span>}
                   </td>
-                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{order.createdAt} hs</td>
+                  <td className="px-4 py-3 font-mono text-xs text-muted-foreground whitespace-nowrap">{formatTimeLabel(order.createdAt)}</td>
                   <td className="px-4 py-3"><TypePill type={order.type} /></td>
                   <td className="px-4 py-3">
                     {CAN_CANCEL.includes(order.status) && (

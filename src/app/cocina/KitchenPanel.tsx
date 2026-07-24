@@ -3,11 +3,14 @@ import type { Order } from "../types";
 import { formatCurrency } from "../lib/format";
 import { StatusBadge, TypePill } from "../components/shared";
 import { timeAgo } from "./timeAgo";
+import { formatTimeLabel, nowLabel } from "../lib/time";
 import { AgeIndicator } from "./AgeIndicator";
 
-// Panel principal de cocina: pedidos que todavía no tienen horario de retiro asignado, ordenados
-// de más a menos tiempo esperando. Los pedidos ya programados (para reprogramar) viven solo en
-// la pantalla "Asignar Horarios".
+// Panel principal de cocina: pedidos que todavía no tienen horario de retiro, ordenados de más
+// a menos tiempo esperando. Desde que el horario se elige al crear el pedido (ver SlotPicker),
+// esta lista casi siempre está vacía — sigue existiendo como red de contención para el puñado
+// de pedidos cargados sin turno (todos los turnos visibles llenos al momento de cargarlos), que
+// se resuelven desde "Reprogramar".
 export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssign: (id: string) => void }) {
   const active = orders
     .filter(o => o.status !== "Entregado" && o.status !== "Listo para retirar" && o.status !== "Cancelado" && !o.estimatedTime)
@@ -21,7 +24,7 @@ export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssi
         <div>
           <h1 className="font-display text-4xl font-bold leading-none">Panel de Cocina</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {active.length} pedido{active.length !== 1 ? "s" : ""} activo{active.length !== 1 ? "s" : ""} — {new Date().toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" })} hs
+            {active.length} pedido{active.length !== 1 ? "s" : ""} activo{active.length !== 1 ? "s" : ""} — {nowLabel()} hs
           </p>
         </div>
       </div>
@@ -67,7 +70,7 @@ export function KitchenPanel({ orders, onGoAssign }: { orders: Order[]; onGoAssi
                   <div className="flex items-center gap-3 flex-wrap">
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                       <Clock size={12} />
-                      <span>Ingresó: <span className="font-mono font-semibold text-foreground">{order.createdAt} hs</span></span>
+                      <span>Ingresó: <span className="font-mono font-semibold text-foreground">{formatTimeLabel(order.createdAt)}</span></span>
                     </div>
                     <AgeIndicator createdAt={order.createdAt} hasSchedule={false} />
                   </div>

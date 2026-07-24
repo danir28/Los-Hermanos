@@ -2,13 +2,16 @@ import { useState } from "react";
 import { ShoppingCart, Clock, Phone, User, Plus, Minus, Trash2 } from "lucide-react";
 import type { CartItem } from "../types";
 import { formatCurrency } from "../lib/format";
+import { SlotPicker } from "../components/shared";
 
-// Pantalla de carrito del cliente: edición de cantidades y confirmación del pedido con nombre y teléfono.
-// isOpenNow llega calculado desde el backend (ver AppCliente.tsx); mientras no cargó todavía
-// (null) no se bloquea el botón, para no mostrar un falso "cerrado" en el primer render.
-export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: number, delta: number) => void; onConfirm: (name: string, phone: string) => void; isOpenNow: boolean | null }) {
+// Pantalla de carrito del cliente: edición de cantidades y confirmación del pedido con nombre,
+// teléfono y horario de retiro. isOpenNow llega calculado desde el backend (ver AppCliente.tsx);
+// mientras no cargó todavía (null) no se bloquea el botón, para no mostrar un falso "cerrado" en
+// el primer render.
+export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: number, delta: number) => void; onConfirm: (name: string, phone: string, estimatedTime: string) => void; isOpenNow: boolean | null }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [time, setTime] = useState<string | null>(null);
   const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
 
   if (cart.length === 0) {
@@ -67,6 +70,9 @@ export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { car
             </div>
           </div>
           <div className="bg-card border border-border rounded-2xl p-5">
+            <SlotPicker value={time} onChange={setTime} />
+          </div>
+          <div className="bg-card border border-border rounded-2xl p-5">
             <h2 className="font-semibold text-lg mb-4">Tus datos</h2>
             <div className="space-y-3">
               <div>
@@ -86,10 +92,6 @@ export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { car
                 </div>
               </div>
             </div>
-            <div className="mt-4 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-800 flex gap-2.5 leading-relaxed">
-              <Clock size={14} className="shrink-0 mt-0.5 text-amber-600" />
-              <span>La cocina asignará el horario estimado de retiro. No seleccionás la hora — ellos te la informan.</span>
-            </div>
             {isOpenNow === false && (
               <div className="mt-3 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex gap-2.5 leading-relaxed">
                 <Clock size={14} className="shrink-0 mt-0.5 text-red-600" />
@@ -97,8 +99,8 @@ export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { car
               </div>
             )}
           </div>
-          <button onClick={() => name.trim() && phone.trim() && onConfirm(name.trim(), phone.trim())}
-            disabled={!name.trim() || !phone.trim() || isOpenNow === false}
+          <button onClick={() => name.trim() && phone.trim() && time && onConfirm(name.trim(), phone.trim(), time)}
+            disabled={!name.trim() || !phone.trim() || !time || isOpenNow === false}
             className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
             {isOpenNow === false ? "Local cerrado" : "Confirmar Pedido"}
           </button>

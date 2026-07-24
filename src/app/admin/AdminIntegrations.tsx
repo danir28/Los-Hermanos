@@ -73,7 +73,7 @@ export function AdminIntegrations() {
             Trae el catálogo de productos y precios desde FUDO hacia este sistema.
           </p>
           <div className="text-xs text-muted-foreground mb-4 space-y-1">
-            {fudo.lastSync && <p>Última sincronización: {new Date(fudo.lastSync).toLocaleString("es-AR")}</p>}
+            {fudo.lastSync && <p>Última sincronización: {new Date(fudo.lastSync).toLocaleString("es-AR", { hour12: false })}</p>}
             {fudo.error && <p className="text-red-600">{fudo.error}</p>}
             {syncMsg && <p className="text-foreground">{syncMsg}</p>}
             {fudo.status === "off" && (

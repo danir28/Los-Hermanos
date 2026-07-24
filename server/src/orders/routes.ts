@@ -1,7 +1,8 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../auth/middleware.js";
 import { asyncHandler } from "../lib/asyncHandler.js";
-import { createOrder, listOrders, lookupOrder, updateOrder, BusinessClosedError, OrderNotFoundError } from "./service.js";
+import { createOrder, getSlotAvailability, listOrders, lookupOrder, updateOrder, BusinessClosedError, OrderNotFoundError } from "./service.js";
+import { InvalidSlotError, SlotFullError } from "./slots.js";
 import type { CreateOrderInput, UpdateOrderInput } from "./types.js";
 
 export const ordersRouter = Router();
@@ -18,12 +19,23 @@ ordersRouter.post("/", asyncHandler(async (req, res) => {
     const order = await createOrder(body as CreateOrderInput);
     res.json(order);
   } catch (err) {
-    if (err instanceof BusinessClosedError) {
+    if (err instanceof BusinessClosedError || err instanceof SlotFullError) {
       res.status(409).json({ error: err.message });
+      return;
+    }
+    if (err instanceof InvalidSlotError) {
+      res.status(400).json({ error: err.message });
       return;
     }
     throw err;
   }
+}));
+
+// Disponibilidad de los turnos de retiro de la jornada comercial en curso (ver orders/slots.ts).
+// Pública: la consume tanto el checkout del cliente como los formularios de carga manual de
+// recepción/cocina, ninguno de los cuales tiene por qué estar logueado para ver esto.
+ordersRouter.get("/slots", asyncHandler(async (_req, res) => {
+  res.json(await getSlotAvailability());
 }));
 
 // Busca un único pedido por su número visible o por teléfono. Pública (la usa el
@@ -64,6 +76,14 @@ ordersRouter.patch("/:id", requireAuth, requireRole("recepcionista", "cocina", "
   } catch (err) {
     if (err instanceof OrderNotFoundError) {
       res.status(404).json({ error: err.message });
+      return;
+    }
+    if (err instanceof SlotFullError) {
+      res.status(409).json({ error: err.message });
+      return;
+    }
+    if (err instanceof InvalidSlotError) {
+      res.status(400).json({ error: err.message });
       return;
     }
     res.status(500).json({ error: err instanceof Error ? err.message : "Error desconocido al actualizar el pedido" });

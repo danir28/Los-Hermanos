@@ -2,6 +2,7 @@ import { isBusinessOpenNow } from "../businessHours/service.js";
 import { db } from "../db.js";
 import type { Order, OrderItem } from "../generated/prisma/client.js";
 import { businessDayFor } from "./businessDay.js";
+import { assertValidSlotOrThrow, generateSlots, isSlotInPast, SLOT_CAPACITY, SlotFullError } from "./slots.js";
 import type { CreateOrderInput, OrderDTO, UpdateOrderInput } from "./types.js";
 
 export class OrderNotFoundError extends Error {
@@ -58,10 +59,14 @@ function toDTO(order: OrderWithItems): OrderDTO {
   };
 }
 
-// Crea un pedido nuevo (online, presencial, telefónico) con estado inicial "Pendiente" y sin
-// horario asignado todavía; el total se calcula a partir de los ítems recibidos. El número
-// visible se asigna con un upsert atómico sobre OrderCounter (increment), para que dos pedidos
-// creados casi al mismo tiempo nunca se lleven el mismo número dentro de la misma jornada.
+// Crea un pedido nuevo (online, presencial, telefónico). Si viene un turno de retiro elegido
+// (input.estimatedTime, ver orders/slots.ts), nace directamente "Programado" con ese horario;
+// si no, nace "Pendiente" sin horario como antes (fallback para cuando todos los turnos
+// visibles están llenos y igual hay que cargar el pedido). El total se calcula a partir de los
+// ítems recibidos. El número visible se asigna con un upsert atómico sobre OrderCounter
+// (increment) — ese mismo upsert sirve de punto de serialización para el chequeo de cupo del
+// turno: al quedar dentro de la misma transacción, el row-lock que toma protege ambas cosas, sin
+// necesidad de un lock aparte.
 export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
   if (input.type === "online" && !(await isBusinessOpenNow())) {
     throw new BusinessClosedError();
@@ -70,27 +75,60 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
   const total = input.items.reduce((s, i) => s + i.price * i.qty, 0);
   const businessDate = businessDayFor(new Date());
 
-  const counter = await db.orderCounter.upsert({
-    where: { businessDate },
-    create: { businessDate, lastNumber: 1 },
-    update: { lastNumber: { increment: 1 } },
-  });
+  const order = await db.$transaction(async (tx) => {
+    const counter = await tx.orderCounter.upsert({
+      where: { businessDate },
+      create: { businessDate, lastNumber: 1 },
+      update: { lastNumber: { increment: 1 } },
+    });
 
-  const order = await db.order.create({
-    data: {
-      orderNumber: counter.lastNumber,
-      businessDate,
-      customer: input.customer,
-      phone: input.phone,
-      type: input.type,
-      status: "Pendiente",
-      estimatedTime: null,
-      total,
-      items: { create: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })) },
-    },
-    include: { items: true },
+    let status = "Pendiente";
+    let estimatedTime: string | null = null;
+    if (input.estimatedTime) {
+      assertValidSlotOrThrow(input.estimatedTime, businessDate);
+      const taken = await tx.order.count({
+        where: { businessDate, estimatedTime: input.estimatedTime, status: { not: "Cancelado" } },
+      });
+      if (taken >= SLOT_CAPACITY) throw new SlotFullError(input.estimatedTime);
+      status = "Programado";
+      estimatedTime = input.estimatedTime;
+    }
+
+    return tx.order.create({
+      data: {
+        orderNumber: counter.lastNumber,
+        businessDate,
+        customer: input.customer,
+        phone: input.phone,
+        type: input.type,
+        status,
+        estimatedTime,
+        total,
+        items: { create: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })) },
+      },
+      include: { items: true },
+    });
   });
   return toDTO(order);
+}
+
+// Disponibilidad de cada turno de la jornada comercial dada (hoy por defecto): cuántos pedidos
+// ya lo ocuparon, si ya pasó, y si todavía se puede elegir. La usa el SlotPicker del frontend
+// (GET /api/orders/slots) para no dejar elegir un turno lleno o vencido desde la UI, aunque el
+// backend igual lo vuelve a validar en createOrder/updateOrder por las dudas.
+export async function getSlotAvailability(businessDate: Date = businessDayFor(new Date())) {
+  const counts = await db.order.groupBy({
+    by: ["estimatedTime"],
+    where: { businessDate, estimatedTime: { not: null }, status: { not: "Cancelado" } },
+    _count: true,
+  });
+  const takenBySlot = new Map(counts.map(c => [c.estimatedTime, c._count]));
+
+  return generateSlots().map(time => {
+    const taken = takenBySlot.get(time) ?? 0;
+    const isPast = isSlotInPast(time, businessDate);
+    return { time, taken, capacity: SLOT_CAPACITY, isPast, available: taken < SLOT_CAPACITY && !isPast };
+  });
 }
 
 // Lista pedidos, más nuevo primero (mismo orden que ya usa la app en memoria).
@@ -144,10 +182,34 @@ export async function updateOrder(id: string, patch: UpdateOrderInput): Promise<
   const existing = await db.order.findUnique({ where: { id } });
   if (!existing) throw new OrderNotFoundError(id);
 
-  const data = patch.estimatedTime !== undefined
-    ? { estimatedTime: patch.estimatedTime, status: "Programado" }
-    : { status: patch.status, ...(patch.status === "Entregado" ? { deliveredAt: new Date() } : {}) };
+  // Asignar/reprogramar horario: misma validación de cupo que createOrder (formato, rango, no
+  // pasado, máximo SLOT_CAPACITY), para que "Reprogramar" no pueda mandar un pedido a un turno
+  // ya lleno y romper la garantía que resuelve el requerimiento de la tabla de horarios. Se
+  // excluye el propio pedido del conteo (está reprogramando su propio turno, no compitiendo
+  // contra sí mismo). Se usa la jornada comercial del pedido original (existing.businessDate),
+  // no la de "ahora" — es lo correcto para reprogramar same-day, que es el caso real hoy.
+  if (patch.estimatedTime !== undefined) {
+    const order = await db.$transaction(async (tx) => {
+      assertValidSlotOrThrow(patch.estimatedTime!, existing.businessDate);
+      const taken = await tx.order.count({
+        where: {
+          businessDate: existing.businessDate,
+          estimatedTime: patch.estimatedTime,
+          status: { not: "Cancelado" },
+          id: { not: id },
+        },
+      });
+      if (taken >= SLOT_CAPACITY) throw new SlotFullError(patch.estimatedTime!);
+      return tx.order.update({
+        where: { id },
+        data: { estimatedTime: patch.estimatedTime, status: "Programado" },
+        include: { items: true },
+      });
+    });
+    return toDTO(order);
+  }
 
+  const data = { status: patch.status, ...(patch.status === "Entregado" ? { deliveredAt: new Date() } : {}) };
   const order = await db.order.update({ where: { id }, data, include: { items: true } });
   return toDTO(order);
 }

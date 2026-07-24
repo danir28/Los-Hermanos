@@ -2,17 +2,27 @@ import { useState } from "react";
 import { CheckCircle, Clock } from "lucide-react";
 import type { Order } from "../types";
 import { formatCurrency } from "../lib/format";
-import { TypePill } from "../components/shared";
+import { formatTimeLabel } from "../lib/time";
+import { SlotPicker, TypePill } from "../components/shared";
 import { AgeIndicator } from "./AgeIndicator";
 import { REPROG_REASONS } from "./reprogReasons";
 import { timeAgo } from "./timeAgo";
 
-// Pantalla de cocina para asignar u reprogramar el horario de retiro de un pedido.
+// Pantalla de cocina para reprogramar el horario de retiro de un pedido. Desde que el horario
+// se elige al crear el pedido (ver SlotPicker en ReceptionistCreateOrder/CustomerCart), casi
+// todo pedido que llega acá ya tiene un horario asignado — esta pantalla pasó de ser la
+// asignación inicial a ser el mecanismo para CAMBIARLO por demanda, falta de stock o demora
+// (ver REPROG_REASONS). La rama "sin horario todavía" se conserva como red de contención para
+// el puñado de pedidos que se hayan cargado sin turno (todos los turnos visibles llenos al
+// momento de cargarlos).
 export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: Order[]; onAssigned: (id: string, time: string) => void; preselectedId: string | null }) {
   const [selectedId, setSelectedId] = useState(preselectedId ?? "");
-  const [time, setTime] = useState("12:00");
+  const [time, setTime] = useState<string | null>(null);
   const [reason, setReason] = useState("");
   const [flash, setFlash] = useState(false);
+  // Se incrementa en cada intento de confirmar, para que el SlotPicker vuelva a consultar
+  // disponibilidad real — cubre el caso de que el turno elegido se haya llenado mientras tanto.
+  const [refreshSignal, setRefreshSignal] = useState(0);
 
   // Prioridad: primero los que todavía no tienen horario (y entre ellos, quien hace más tiempo
   // que espera); recién después los que ya tienen horario asignado y solo se pueden reprogramar.
@@ -28,20 +38,22 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
   const isReprogramming = !!(selected?.estimatedTime);
 
   // Al elegir un pedido de la lista, precarga el form con su horario actual (si ya tiene uno)
-  // en vez de dejar el "12:00" por defecto, y limpia el motivo de una selección anterior.
+  // en vez de dejar nada elegido, y limpia el motivo de una selección anterior.
   const handleSelect = (id: string) => {
     setSelectedId(id);
     setReason("");
     const o = orders.find(x => x.id === id);
-    setTime(o?.estimatedTime ?? "12:00");
+    setTime(o?.estimatedTime ?? null);
   };
 
   // Confirma la asignación/reprogramación: exige motivo solo cuando ya había un horario asignado
   // (reprogramación), dispara el flash de éxito y limpia la selección para el próximo pedido.
+  // Refresca el SlotPicker en cada intento, por si el turno elegido se llenó mientras tanto.
   const handleConfirm = () => {
     if (!selectedId || !time) return;
     if (isReprogramming && !reason) return;
     onAssigned(selectedId, time);
+    setRefreshSignal(s => s + 1);
     setFlash(true);
     setTimeout(() => { setFlash(false); setSelectedId(""); setReason(""); }, 1600);
   };
@@ -49,8 +61,8 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
   return (
     <div className="max-w-5xl mx-auto px-6 py-8">
       <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Gestión de producción</p>
-      <h1 className="font-display text-4xl font-bold mb-2">Asignación de Horarios</h1>
-      <p className="text-muted-foreground mb-8">Asigná o reprogramá el horario estimado de retiro para cada pedido.</p>
+      <h1 className="font-display text-4xl font-bold mb-2">Reprogramación de Horarios</h1>
+      <p className="text-muted-foreground mb-8">Cambiá el horario de retiro de un pedido cuando haga falta por demanda, falta de stock o demora en cocina.</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Order list */}
@@ -66,7 +78,7 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
                     <span className="font-mono font-bold text-primary">#{order.orderNumber}</span>
                     <div className="flex items-center gap-2">
                       {hasTime
-                        ? <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">{order.estimatedTime} hs</span>
+                        ? <span className="text-xs font-mono font-semibold text-blue-700 bg-blue-50 border border-blue-200 px-2 py-0.5 rounded-full">{formatTimeLabel(order.estimatedTime!)}</span>
                         : <span className="text-xs bg-amber-50 border border-amber-200 text-amber-700 px-2 py-0.5 rounded-full font-medium">Sin horario</span>
                       }
                       <AgeIndicator createdAt={order.createdAt} hasSchedule={hasTime} />
@@ -122,18 +134,17 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
                   <Clock size={16} className="text-blue-600 shrink-0" />
                   <div>
                     <p className="text-xs text-blue-700 font-medium">Horario actualmente asignado</p>
-                    <p className="font-mono font-bold text-blue-800 text-lg">{selected.estimatedTime} hs</p>
+                    <p className="font-mono font-bold text-blue-800 text-lg">{formatTimeLabel(selected.estimatedTime!)}</p>
                   </div>
                 </div>
               )}
 
-              {/* New time input */}
+              {/* New time slot */}
               <div className="mb-4">
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">
-                  {isReprogramming ? "Nueva hora de retiro" : "Hora estimada de retiro"}
+                  {isReprogramming ? "Nuevo horario de retiro" : "Horario de retiro"}
                 </label>
-                <input type="time" value={time} onChange={e => setTime(e.target.value)}
-                  className="w-full px-4 py-4 border border-border rounded-xl bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 font-mono text-2xl text-center" />
+                <SlotPicker value={time} onChange={setTime} refreshSignal={refreshSignal} />
               </div>
 
               {/* Reason (only for reprogramming) */}
@@ -161,9 +172,9 @@ export function KitchenAssign({ orders, onAssigned, preselectedId }: { orders: O
                   <CheckCircle size={18} /> {isReprogramming ? "¡Reprogramado!" : "¡Horario asignado!"} → Programado
                 </div>
               ) : (
-                <button onClick={handleConfirm} disabled={isReprogramming && !reason}
+                <button onClick={handleConfirm} disabled={!time || (isReprogramming && !reason)}
                   className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold hover:bg-primary/90 transition-colors shadow-md disabled:opacity-40 disabled:cursor-not-allowed">
-                  {isReprogramming ? `Reprogramar — ${time} hs` : `Confirmar — Retiro a las ${time} hs`}
+                  {time ? (isReprogramming ? `Reprogramar — ${formatTimeLabel(time)}` : `Confirmar — Retiro a las ${formatTimeLabel(time)}`) : "Elegí un horario"}
                 </button>
               )}
             </div>

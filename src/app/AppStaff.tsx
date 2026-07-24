@@ -9,7 +9,7 @@ import { AuthProvider, LoginScreen, useAuth } from "./auth";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
 import { KitchenPanel, KitchenAssign, KitchenKanban } from "./cocina";
 import { AdminBusinessHours, AdminDashboard, AdminIntegrations, AdminReports } from "./admin";
-import { RoleNavTabs, type NavTab } from "./components/shared";
+import { OrderTicket, RoleNavTabs, type NavTab } from "./components/shared";
 
 // ─── App privada de staff ───────────────────────────────────────────────────
 // Recepción/cocina/admin, siempre detrás de login (ver ./auth/AuthContext). Nunca
@@ -31,9 +31,10 @@ const RECEPTIONIST_TABS: NavTab[] = [
 ];
 
 const KITCHEN_TABS: NavTab[] = [
-  { key: "panel",  label: "Panel",            Icon: ChefHat         },
-  { key: "assign", label: "Asignar Horarios", Icon: Clock           },
-  { key: "kanban", label: "Tablero",          Icon: LayoutDashboard },
+  { key: "panel",        label: "Panel",        Icon: ChefHat         },
+  { key: "create",       label: "Nuevo Pedido", Icon: PlusCircle      },
+  { key: "reprogramar",  label: "Reprogramar",  Icon: Clock           },
+  { key: "kanban",       label: "Tablero",      Icon: LayoutDashboard },
 ];
 
 const ADMIN_TABS: NavTab[] = [
@@ -50,6 +51,14 @@ const STAFF_DEFAULT_VIEW: Record<UserRole, string> = {
   recepcionista: RECEPTIONIST_TABS[0].key,
   cocina: KITCHEN_TABS[0].key,
   admin: ADMIN_TABS[0].key,
+};
+
+// Vista a la que vuelve el formulario de carga manual de pedidos al confirmar, por rol —
+// "dashboard" no es una vista válida para cocina (no tiene esa key en KITCHEN_TABS).
+const CREATE_ORDER_RETURN_VIEW: Record<UserRole, string> = {
+  recepcionista: "dashboard",
+  cocina: "panel",
+  admin: "dashboard",
 };
 
 // Punto de entrada de la app de staff: solo envuelve todo en AuthProvider para que
@@ -71,6 +80,10 @@ function AppStaffContent() {
   const [staffView, setStaffView] = useState("dashboard");
   const [orders, setOrders] = useState<Order[]>([]);
   const [preselectedAssignId, setPreselectedAssignId] = useState<string | null>(null);
+  // Pedido a imprimir: se setea al crear un pedido manual y dispara window.print() (ver
+  // OrderTicket más abajo). Vive acá (no en ReceptionistCreateOrder) porque el ticket tiene
+  // que montarse en el DOM de AppStaff para que @media print lo encuentre al imprimir.
+  const [printOrder, setPrintOrder] = useState<Order | null>(null);
 
   // Al loguearse (o al validar el token guardado contra /me), arranca en la primera
   // vista de la sección del usuario. La sección en sí no es un estado propio: es
@@ -79,6 +92,16 @@ function AppStaffContent() {
     if (!user) return;
     setStaffView(STAFF_DEFAULT_VIEW[user.rol]);
   }, [user]);
+
+  // Dispara la impresión de la comanda apenas se crea un pedido manualmente (ver
+  // createManualOrder). El setTimeout(0) asegura que el <OrderTicket> ya se haya montado en el
+  // DOM (ver el render al final de este componente) antes de invocar el diálogo de impresión
+  // del navegador — sin esto, @media print podría no encontrar el nodo todavía.
+  useEffect(() => {
+    if (!printOrder) return;
+    const timer = setTimeout(() => window.print(), 0);
+    return () => clearTimeout(timer);
+  }, [printOrder]);
 
   // Carga los pedidos reales desde el backend una vez que hay sesión (GET /api/orders
   // pasó a ser solo-staff, necesita el token).
@@ -96,17 +119,21 @@ function AppStaffContent() {
     return <LoginScreen />;
   }
 
-  // Pedido cargado manualmente por recepción (presencial, telefónico o whatsapp).
-  const createReceptionistOrder = async (input: { customer: string; phone: string; items: CartItem[]; type: OrderType }) => {
+  // Pedido cargado manualmente por recepción o cocina (presencial o telefónico) — la usan ambos
+  // roles, por eso la vista a la que vuelve al terminar depende de cuál esté logueado
+  // (cocina no tiene una vista "dashboard" como recepción y admin).
+  const createManualOrder = async (input: { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string | null }) => {
     try {
       const newOrder = await api.ordersCreate({
         customer: input.customer,
         phone: input.phone,
         items: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
         type: input.type,
+        ...(input.estimatedTime ? { estimatedTime: input.estimatedTime } : {}),
       });
       setOrders(prev => [newOrder, ...prev]);
-      setStaffView("dashboard");
+      setPrintOrder(newOrder);
+      setStaffView(CREATE_ORDER_RETURN_VIEW[user.rol]);
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Error al crear el pedido");
     }
@@ -158,16 +185,17 @@ function AppStaffContent() {
           <RoleNavTabs tabs={RECEPTIONIST_TABS} active={staffView} onSelect={setStaffView} />
           {staffView === "dashboard" && <ReceptionistDashboard orders={orders} onNavigate={setStaffView} onUpdateStatus={updateStatus} />}
           {staffView === "orders"    && <ReceptionistOrders orders={orders} onUpdateStatus={updateStatus} />}
-          {staffView === "create"    && <ReceptionistCreateOrder onConfirm={createReceptionistOrder} />}
+          {staffView === "create"    && <ReceptionistCreateOrder onConfirm={createManualOrder} />}
         </>
       )}
 
       {user.rol === "cocina" && (
         <>
           <RoleNavTabs tabs={KITCHEN_TABS} active={staffView} onSelect={setStaffView} />
-          {staffView === "panel"  && <KitchenPanel orders={orders} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("assign"); }} />}
-          {staffView === "assign" && <KitchenAssign orders={orders} onAssigned={assignTime} preselectedId={preselectedAssignId} />}
-          {staffView === "kanban" && <KitchenKanban orders={orders} onUpdateStatus={updateStatus} />}
+          {staffView === "panel"       && <KitchenPanel orders={orders} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("reprogramar"); }} />}
+          {staffView === "create"      && <ReceptionistCreateOrder onConfirm={createManualOrder} />}
+          {staffView === "reprogramar" && <KitchenAssign orders={orders} onAssigned={assignTime} preselectedId={preselectedAssignId} />}
+          {staffView === "kanban"      && <KitchenKanban orders={orders} onUpdateStatus={updateStatus} />}
         </>
       )}
 
@@ -180,6 +208,8 @@ function AppStaffContent() {
           {staffView === "integraciones" && <AdminIntegrations />}
         </>
       )}
+
+      {printOrder && <OrderTicket order={printOrder} />}
     </div>
   );
 }
