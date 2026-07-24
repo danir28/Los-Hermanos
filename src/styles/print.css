@@ -1,29 +1,35 @@
 /* Ticket de comanda (ver src/app/components/shared/OrderTicket.tsx). Oculto en pantalla normal;
-   solo visible al imprimir. Técnica clásica de "imprimir un único elemento": se oculta todo lo
-   demás por visibilidad (no display, para no alterar el layout del resto de la página) y se
-   posiciona el ticket en absoluto arriba a la izquierda de la hoja impresa.
-   Ancho asumido 80mm (rollo térmico típico de comanda) — a confirmar contra la impresora real
-   del local antes de dar el detalle visual por cerrado. */
+   solo visible al imprimir. El resto de la app (AppStaff.tsx) se oculta con "print:hidden"
+   (Tailwind, display:none) en vez de visibility:hidden — a diferencia de visibility, display:none
+   saca el contenido del flujo del documento, así que no ocupa alto real al paginar. Con
+   visibility:hidden el alto total de la app (mucho más que una hoja) igual se paginaba al
+   imprimir, generando páginas en blanco de más después del ticket. El ticket queda como hermano
+   de ese div (no adentro) para que display:none en el padre no se lo lleve puesto a él también.
+   Ancho 80mm confirmado contra el modelo real que el cliente va a comprar (Fukun 80mm USB/
+   Ethernet, impresora térmica de comanda de rollo continuo). */
+
+/* Sin esto, el navegador imprime en el tamaño de papel por default (A4/Carta) mientras no haya
+   una impresora térmica real conectada — el ticket (80mm de ancho) queda como una franja
+   chiquita en la esquina de una hoja gigante, que es exactamente lo que se veía "desfasado".
+   200mm de alto es un valor fijo generoso (el spec de @page no admite "ancho fijo + alto
+   automático", solo dos largos fijos o un tamaño de papel con nombre) — alcanza de sobra para
+   un pedido con varios ítems; si algún pedido puntual lo superara, seguiría imprimiéndose bien,
+   solo que cortado en una segunda hoja. Una vez que esté la impresora térmica real (Fukun
+   80mm), su driver va a traer su propio preset de "papel continuo 80mm" que reemplaza a este
+   por completo — este @page queda como fallback para poder probar/imprimir a PDF mientras
+   tanto. */
+@page {
+  size: 80mm 200mm;
+  margin: 0;
+}
 
 .order-ticket {
   display: none;
 }
 
 @media print {
-  body * {
-    visibility: hidden;
-  }
-
-  .order-ticket,
-  .order-ticket * {
-    visibility: visible;
-  }
-
   .order-ticket {
     display: block;
-    position: absolute;
-    top: 0;
-    left: 0;
     width: 80mm;
     padding: 4mm;
     font-family: 'Courier New', monospace;

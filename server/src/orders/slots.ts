@@ -32,7 +32,9 @@ export class InvalidSlotError extends Error {
   }
 }
 
-function parseTime(time: string): { hours: number; minutes: number } {
+// Exportada porque orders/service.ts#advanceScheduledOrders también necesita convertir un
+// estimatedTime ("HH:mm") a instante real, para decidir si ya toca avanzar el estado.
+export function parseTime(time: string): { hours: number; minutes: number } {
   const [hours, minutes] = time.split(":").map(Number);
   return { hours, minutes };
 }

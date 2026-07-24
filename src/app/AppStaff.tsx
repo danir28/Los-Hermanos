@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   Clock, LayoutDashboard, ClipboardList, PlusCircle,
-  ChefHat, BarChart3, Plug, FileBarChart, LogOut,
+  ChefHat, BarChart3, FileBarChart, LogOut,
 } from "lucide-react";
 import type { CartItem, Order, OrderStatus, OrderType } from "./types";
 import { api, type UserRole } from "./lib/api";
 import { AuthProvider, LoginScreen, useAuth } from "./auth";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
-import { KitchenPanel, KitchenAssign, KitchenKanban } from "./cocina";
-import { AdminBusinessHours, AdminDashboard, AdminIntegrations, AdminReports } from "./admin";
+import { KitchenPanel, KitchenAssign } from "./cocina";
+import { AdminBusinessHours, AdminDashboard, AdminReports } from "./admin";
 import { OrderTicket, RoleNavTabs, type NavTab } from "./components/shared";
 
 // ─── App privada de staff ───────────────────────────────────────────────────
@@ -30,18 +30,23 @@ const RECEPTIONIST_TABS: NavTab[] = [
   { key: "create",    label: "Nuevo Pedido",     Icon: PlusCircle      },
 ];
 
+// Sin Tablero: desde que el horario se elige al crear el pedido y los estados avanzan solos
+// según el reloj (ver advanceScheduledOrders en el backend), no hace falta una pantalla para
+// avanzar pedidos a mano de un estado al siguiente.
 const KITCHEN_TABS: NavTab[] = [
   { key: "panel",        label: "Panel",        Icon: ChefHat         },
   { key: "create",       label: "Nuevo Pedido", Icon: PlusCircle      },
   { key: "reprogramar",  label: "Reprogramar",  Icon: Clock           },
-  { key: "kanban",       label: "Tablero",      Icon: LayoutDashboard },
 ];
 
+// Sin "Integraciones": ni FUDO ni el bot de WhatsApp hacen falta para este sistema (reunión con
+// el cliente del 24/7/2026 — ver memoria de proyecto). El backend de ambas integraciones queda
+// intacto por si se retoma en un proyecto futuro y separado, pero no tiene sentido mostrárselo
+// al cliente acá.
 const ADMIN_TABS: NavTab[] = [
   { key: "dashboard",     label: "Dashboard",    Icon: BarChart3    },
   { key: "reportes",      label: "Reportes",     Icon: FileBarChart },
   { key: "horarios",      label: "Horario",      Icon: Clock        },
-  { key: "integraciones", label: "Integraciones",Icon: Plug         },
 ];
 
 // Vista inicial de staffView al entrar a cada sección (la primera pestaña de cada una).
@@ -93,23 +98,42 @@ function AppStaffContent() {
     setStaffView(STAFF_DEFAULT_VIEW[user.rol]);
   }, [user]);
 
-  // Dispara la impresión de la comanda apenas se crea un pedido manualmente (ver
-  // createManualOrder). El setTimeout(0) asegura que el <OrderTicket> ya se haya montado en el
-  // DOM (ver el render al final de este componente) antes de invocar el diálogo de impresión
-  // del navegador — sin esto, @media print podría no encontrar el nodo todavía.
+  // Dispara la impresión de la comanda: al crear un pedido manualmente (ver createManualOrder)
+  // o al tocar "Imprimir ticket" en un pedido online desde el Panel de cocina (ver printOrderTicket
+  // más abajo). El setTimeout(0) asegura que el <OrderTicket> ya se haya montado en el DOM (ver
+  // el render al final de este componente) antes de invocar el diálogo de impresión del
+  // navegador — sin esto, @media print podría no encontrar el nodo todavía. Vuelve a limpiar
+  // printOrder a null después de imprimir: si no, tocar "Imprimir ticket" dos veces seguidas
+  // sobre el mismo pedido no dispararía una segunda impresión (mismo objeto, React no vuelve a
+  // correr el efecto si el estado "cambia" al mismo valor).
   useEffect(() => {
     if (!printOrder) return;
-    const timer = setTimeout(() => window.print(), 0);
+    const timer = setTimeout(() => {
+      window.print();
+      setPrintOrder(null);
+    }, 0);
     return () => clearTimeout(timer);
   }, [printOrder]);
 
-  // Carga los pedidos reales desde el backend una vez que hay sesión (GET /api/orders
-  // pasó a ser solo-staff, necesita el token).
+  // Carga los pedidos reales desde el backend una vez que hay sesión (GET /api/orders pasó a
+  // ser solo-staff, necesita el token), y los vuelve a pedir cada 30s. Antes alcanzaba con
+  // cargarlos una sola vez al loguearse porque todo cambio de estado era manual (alguien lo
+  // hacía clickeando acá mismo, así que el estado local ya quedaba al día). Desde que los
+  // pedidos avanzan de estado solos según el reloj (ver advanceScheduledOrders en el backend),
+  // sin este refresco periódico cocina vería el Panel desactualizado hasta recargar la página a
+  // mano — el polling es lo que hace que la automatización se note en pantalla.
   useEffect(() => {
     if (!token) return;
+    // Solo la primera carga avisa con un alert si falla — un refresco de fondo que falla (ej.
+    // un corte de red momentáneo) se reintenta solo en el próximo ciclo de 30s, sin interrumpir
+    // a quien esté trabajando con un alert cada 30 segundos.
     api.ordersList(token)
       .then(setOrders)
       .catch(e => window.alert(e instanceof Error ? e.message : "Error al cargar los pedidos"));
+    const interval = setInterval(() => {
+      api.ordersList(token).then(setOrders).catch(() => {});
+    }, 30_000);
+    return () => clearInterval(interval);
   }, [token]);
 
   if (loading) {
@@ -163,8 +187,16 @@ function AppStaffContent() {
 
   const section = SECTION_LABEL[user.rol];
 
+  // El ticket (más abajo) tiene que quedar FUERA de este div al imprimir: si quedara adentro,
+  // ocultar este div con display:none también se lo llevaría puesto a él (los hijos de un
+  // elemento display:none ni siquiera se renderizan). Por eso son hermanos dentro de un
+  // Fragment, y este div se esconde entero con "print:hidden" (Tailwind) — a diferencia del
+  // enfoque anterior (ocultar todo por visibility, dejando el ticket visible por encima), que
+  // generaba páginas en blanco de más: visibility:hidden no saca los elementos del flujo, así
+  // que el alto real de toda la app (mucho más que una hoja) igual se paginaba al imprimir.
   return (
-    <div className="min-h-screen bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
+    <>
+    <div className="min-h-screen bg-background print:hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2.5">
           <span className="flex items-center gap-2 text-sm font-medium">
@@ -192,10 +224,9 @@ function AppStaffContent() {
       {user.rol === "cocina" && (
         <>
           <RoleNavTabs tabs={KITCHEN_TABS} active={staffView} onSelect={setStaffView} />
-          {staffView === "panel"       && <KitchenPanel orders={orders} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("reprogramar"); }} />}
+          {staffView === "panel"       && <KitchenPanel orders={orders} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("reprogramar"); }} onPrint={setPrintOrder} />}
           {staffView === "create"      && <ReceptionistCreateOrder onConfirm={createManualOrder} />}
           {staffView === "reprogramar" && <KitchenAssign orders={orders} onAssigned={assignTime} preselectedId={preselectedAssignId} />}
-          {staffView === "kanban"      && <KitchenKanban orders={orders} onUpdateStatus={updateStatus} />}
         </>
       )}
 
@@ -205,11 +236,11 @@ function AppStaffContent() {
           {staffView === "dashboard"     && <AdminDashboard orders={orders} />}
           {staffView === "reportes"      && <AdminReports />}
           {staffView === "horarios"      && <AdminBusinessHours />}
-          {staffView === "integraciones" && <AdminIntegrations />}
         </>
       )}
 
-      {printOrder && <OrderTicket order={printOrder} />}
     </div>
+    {printOrder && <OrderTicket order={printOrder} />}
+    </>
   );
 }

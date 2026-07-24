@@ -71,9 +71,12 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
         ))}
       </div>
 
-      <h2 className="font-semibold text-base mb-3 flex items-center gap-2">
+      <h2 className="font-semibold text-base mb-1 flex items-center gap-2">
         <span className="w-2 h-2 bg-green-500 rounded-full" /> Listos para retirar
       </h2>
+      <p className="text-xs text-muted-foreground mb-3">
+        Pasan a "Entregado" solos, 15 minutos después del horario de retiro. El botón de abajo es solo para casos excepcionales (alguien retira mucho antes o mucho después).
+      </p>
       <div className="space-y-2">
         {ready.length === 0 && <p className="text-muted-foreground text-sm py-4 text-center bg-card border border-dashed border-border rounded-xl">No hay pedidos listos en este momento</p>}
         {ready.map(order => (
@@ -90,9 +93,9 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-semibold text-green-700">Retiro: {formatTimeLabel(order.estimatedTime!)}</p>
-              <button onClick={() => onUpdateStatus(order.id, "Entregado")}
-                className="mt-1.5 text-xs bg-green-500 text-white px-3 py-1 rounded-full hover:bg-green-600 transition-colors font-medium">
-                ✓ Marcar entregado
+              <button onClick={() => onUpdateStatus(order.id, "Entregado")} title="Caso excepcional: marcar entregado antes de que pase solo"
+                className="mt-1.5 text-xs bg-green-50 text-green-700 border border-green-300 px-3 py-1 rounded-full hover:bg-green-100 transition-colors font-medium">
+                Marcar entregado ahora
               </button>
             </div>
           </div>

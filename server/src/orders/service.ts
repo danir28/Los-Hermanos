@@ -1,8 +1,8 @@
 import { isBusinessOpenNow } from "../businessHours/service.js";
 import { db } from "../db.js";
 import type { Order, OrderItem } from "../generated/prisma/client.js";
-import { businessDayFor } from "./businessDay.js";
-import { assertValidSlotOrThrow, generateSlots, isSlotInPast, SLOT_CAPACITY, SlotFullError } from "./slots.js";
+import { argentinaWallTimeToUtc, businessDayFor } from "./businessDay.js";
+import { assertValidSlotOrThrow, generateSlots, isSlotInPast, parseTime, SLOT_CAPACITY, SlotFullError } from "./slots.js";
 import type { CreateOrderInput, OrderDTO, UpdateOrderInput } from "./types.js";
 
 export class OrderNotFoundError extends Error {
@@ -212,4 +212,54 @@ export async function updateOrder(id: string, patch: UpdateOrderInput): Promise<
   const data = { status: patch.status, ...(patch.status === "Entregado" ? { deliveredAt: new Date() } : {}) };
   const order = await db.order.update({ where: { id }, data, include: { items: true } });
   return toDTO(order);
+}
+
+// Umbrales del avance automático de estados por horario (reunión del 24/7/2026): en cocina son
+// muy puntuales con el horario que le asignan a cada pedido, así que no hace falta que nadie
+// marque a mano "en preparación"/"listo para retirar"/"entregado" — se infieren del reloj. Solo
+// DELIVERED_GRACE_MINUTES importa para el negocio real (da margen a que el cliente pase a
+// buscarlo); PREP_LEAD_MINUTES es puramente cosmético, para que el seguimiento del cliente
+// muestre un mensaje más preciso antes de que esté listo.
+const PREP_LEAD_MINUTES = 20;   // "Programado" → "En preparación"
+const READY_LEAD_MINUTES = 5;   // → "Listo para retirar"
+const DELIVERED_GRACE_MINUTES = 15; // "Listo para retirar" → "Entregado"
+
+// Barre los pedidos con horario asignado que todavía no llegaron a "Entregado"/"Cancelado" y
+// avanza el estado de los que ya cruzaron su umbral de tiempo correspondiente, respecto al
+// horario de retiro elegido (estimatedTime + businessDate, convertido a instante real con
+// argentinaWallTimeToUtc). Pensada para correr periódicamente desde index.ts (ver
+// setInterval), no para ser llamada desde una ruta HTTP. El botón manual "Marcar entregado" en
+// recepción sigue disponible como respaldo — este barrido no le quita esa capacidad, solo hace
+// que en el caso normal (puntual) nadie necesite tocarlo.
+export async function advanceScheduledOrders(now: Date = new Date()): Promise<void> {
+  const candidates = await db.order.findMany({
+    where: { estimatedTime: { not: null }, status: { in: ["Programado", "En preparación", "Listo para retirar"] } },
+  });
+
+  const toPrep: string[] = [];
+  const toReady: string[] = [];
+  const toDelivered: string[] = [];
+
+  for (const order of candidates) {
+    const { hours, minutes } = parseTime(order.estimatedTime!);
+    const slotUtc = argentinaWallTimeToUtc(order.businessDate, hours, minutes);
+    const minutesUntilSlot = (slotUtc.getTime() - now.getTime()) / 60_000;
+
+    if (order.status === "Listo para retirar") {
+      if (-minutesUntilSlot >= DELIVERED_GRACE_MINUTES) toDelivered.push(order.id);
+      continue;
+    }
+    // status es "Programado" o "En preparación": evalúa el umbral más avanzado primero para
+    // que un pedido nunca pase dos veces por la misma jornada de barrido (ej. si el proceso
+    // estuvo caído y el horario ya está encima, salta directo a "Listo para retirar").
+    if (minutesUntilSlot <= READY_LEAD_MINUTES) {
+      toReady.push(order.id);
+    } else if (order.status === "Programado" && minutesUntilSlot <= PREP_LEAD_MINUTES) {
+      toPrep.push(order.id);
+    }
+  }
+
+  if (toPrep.length) await db.order.updateMany({ where: { id: { in: toPrep } }, data: { status: "En preparación" } });
+  if (toReady.length) await db.order.updateMany({ where: { id: { in: toReady } }, data: { status: "Listo para retirar" } });
+  if (toDelivered.length) await db.order.updateMany({ where: { id: { in: toDelivered } }, data: { status: "Entregado", deliveredAt: now } });
 }

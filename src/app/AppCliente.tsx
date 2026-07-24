@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import type { CartItem, Order, OrderType, Product } from "./types";
 import { api, type BusinessHours } from "./lib/api";
-import { CustomerHome, CustomerMenu, CustomerCart, CustomerConfirmation, CustomerTracking } from "./cliente";
+import { CustomerHome, CustomerMenu, CustomerMenuReadOnly, CustomerCart, CustomerConfirmation, CustomerTracking } from "./cliente";
 
 // ─── App pública de clientes ───────────────────────────────────────────────
 // Sin login, sin selector de rol, y sin código de staff: nunca importa ./recepcionista,
@@ -13,6 +13,16 @@ import { CustomerHome, CustomerMenu, CustomerCart, CustomerConfirmation, Custome
 // devuelve api.ordersCreate(...).
 
 export default function AppCliente() {
+  // Modo carta de mostrador (ver memoria de proyecto "QR de carta para mostrador"): el QR que
+  // el recepcionista le muestra a un cliente presencial apunta a "?modo=carta" — carga solo la
+  // carta de solo lectura, sin la navegación/carrito del resto de la app cliente, porque acá el
+  // pedido lo termina cargando el recepcionista, no el cliente desde su celular. El chequeo va
+  // antes de cualquier hook porque no cambia durante la vida de este componente (no hay
+  // navegación client-side que lo modifique sin recargar la página).
+  if (new URLSearchParams(window.location.search).get("modo") === "carta") {
+    return <CustomerMenuReadOnly />;
+  }
+
   const [customerView, setCustomerView] = useState("home");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);

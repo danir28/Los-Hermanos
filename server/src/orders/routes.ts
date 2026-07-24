@@ -58,11 +58,12 @@ ordersRouter.get("/lookup", asyncHandler(async (req, res) => {
   res.json(order);
 }));
 
-// Devuelve los pedidos, más nuevo primero. Solo staff: expone nombre y teléfono de todos
-// los clientes, no puede ser público. Recepción y admin solo ven la jornada comercial en
-// curso (el dashboard de admin es "hoy", no el histórico) — cocina sigue recibiendo todos
-// los pedidos, que es lo que sus propias pantallas necesitan.
-const ROLES_LIMITED_TO_TODAY = new Set(["recepcionista", "admin"]);
+// Devuelve los pedidos, más nuevo primero. Solo staff: expone nombre y teléfono de todos los
+// clientes, no puede ser público. Los tres roles ven solo la jornada comercial en curso —
+// cocina se sumó a esta restricción cuando el Panel pasó a mostrar "todos los pedidos del día"
+// ordenados por horario de retiro (antes recibía el histórico completo porque el viejo Panel
+// y el Tablero necesitaban ver pedidos de cualquier día).
+const ROLES_LIMITED_TO_TODAY = new Set(["recepcionista", "cocina", "admin"]);
 ordersRouter.get("/", requireAuth, requireRole("recepcionista", "cocina", "admin"), asyncHandler(async (req, res) => {
   const onlyCurrentBusinessDay = ROLES_LIMITED_TO_TODAY.has(req.user!.rol);
   res.json(await listOrders({ onlyCurrentBusinessDay }));
