@@ -3,6 +3,7 @@ import { ShoppingCart } from "lucide-react";
 import type { CartItem, Order, OrderType, Product } from "./types";
 import { api, type BusinessHours } from "./lib/api";
 import { CustomerHome, CustomerMenu, CustomerMenuReadOnly, CustomerCart, CustomerConfirmation, CustomerTracking } from "./cliente";
+import logo from "../assets/logo.png";
 
 // ─── App pública de clientes ───────────────────────────────────────────────
 // Sin login, sin selector de rol, y sin código de staff: nunca importa ./recepcionista,
@@ -77,7 +78,10 @@ export default function AppCliente() {
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
-          <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest px-2">Rotisería Los Hermanos</p>
+          <div className="flex items-center gap-2.5 px-2">
+            <img src={logo} alt="" className="w-9 h-9 object-contain" />
+            <p className="font-brand text-xl leading-none text-primary">Los Hermanos</p>
+          </div>
           {businessHours && (
             businessHours.isOpenNow ? (
               <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full font-medium">

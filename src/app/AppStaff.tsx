@@ -10,6 +10,7 @@ import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } fr
 import { KitchenPanel, KitchenAssign } from "./cocina";
 import { AdminBusinessHours, AdminDashboard, AdminProducts, AdminReports } from "./admin";
 import { OrderTicket, RoleNavTabs, type NavTab } from "./components/shared";
+import logo from "../assets/logo.png";
 
 // ─── App privada de staff ───────────────────────────────────────────────────
 // Recepción/cocina/admin, siempre detrás de login (ver ./auth/AuthContext). Nunca
@@ -200,7 +201,8 @@ function AppStaffContent() {
     <div className="min-h-screen bg-background print:hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2.5">
-          <span className="flex items-center gap-2 text-sm font-medium">
+          <span className="flex items-center gap-2.5 text-sm font-medium">
+            <img src={logo} alt="" className="w-8 h-8 object-contain" />
             <span>{section.emoji}</span>{section.label}
           </span>
           <div className="flex items-center gap-3">

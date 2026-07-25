@@ -3,6 +3,7 @@ import { ShoppingCart, Clock, Phone, Flame } from "lucide-react";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 import type { BusinessHours, DaySchedule } from "../lib/api";
+import logo from "../../assets/logo.png";
 
 // Orden de visualización (lunes a domingo) y abreviatura de cada día — dayOfWeek en los datos
 // sigue el criterio del backend (0=domingo..6=sábado, igual a Date#getDay()).
@@ -41,12 +42,13 @@ export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: st
       <div className="relative h-[500px] overflow-hidden">
         <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1400&h=600&fit=crop&auto=format" alt="Rotisería Los Hermanos" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent" />
+        <img src={logo} alt="" className="absolute top-4 right-4 md:top-8 md:right-10 w-36 md:w-52 h-auto object-contain drop-shadow-lg" />
         <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-16 max-w-2xl">
-          <div className="flex items-center gap-2 mb-5">
-            <Flame size={16} className="text-amber-400" />
-            <span className="text-amber-400 font-mono text-xs tracking-[0.2em] uppercase">Rotisería desde 1998</span>
+          <div className="flex items-center gap-2 mb-3">
+            <Flame size={16} className="text-[#E8AFC0]" />
+            <span className="text-[#E8AFC0] font-mono text-xs tracking-[0.2em] uppercase">Sandwichería · Rotisería</span>
           </div>
-          <h1 className="font-display text-white text-5xl md:text-7xl font-bold leading-none mb-5">Los<br />Hermanos</h1>
+          <h1 className="font-brand text-white text-6xl md:text-8xl leading-[0.95] mb-5 text-balance">Los Hermanos</h1>
           <p className="text-white/80 text-base md:text-lg leading-relaxed mb-8 max-w-md">
             Pollos a la brasa, milanesas y empanadas caseras. Preparamos todo con ingredientes frescos, todos los días.
           </p>

@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { LogIn } from "lucide-react";
 import { useAuth } from "./AuthContext";
+import logo from "../../assets/logo.png";
 
 // Pantalla de login del staff (recepción/cocina/admin): usuario + contraseña contra
 // POST /api/auth/login. Se muestra cuando AuthProvider todavía no tiene una sesión
@@ -31,8 +32,10 @@ export function LoginScreen() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <form onSubmit={handleSubmit} className="w-full max-w-sm bg-card border border-border rounded-2xl p-6">
-        <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Rotisería Los Hermanos</p>
-        <h1 className="font-display text-2xl font-bold mb-6">Ingreso de personal</h1>
+        <div className="flex flex-col items-center text-center mb-6">
+          <img src={logo} alt="Rotisería Los Hermanos" className="w-32 h-auto object-contain drop-shadow-sm mb-3" />
+          <h1 className="text-sm font-semibold text-muted-foreground">Ingreso de personal</h1>
+        </div>
 
         <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-2">Usuario</label>
         <input

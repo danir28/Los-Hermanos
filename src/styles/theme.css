@@ -1,31 +1,37 @@
 @custom-variant dark (&:is(.dark *));
 
+/* Paleta derivada del logo real (foto del cartel del local, 24/7/2026): navy oscuro
+   (oklch(18.4% 0.064 273deg), el color del isologo) + bordós agregado a pedido
+   (oklch(39.6% 0.127 5.2deg)) + un pastel rosado que combina con ambos
+   (oklch(90.7% 0.028 6.7deg)). Todos los pares texto/fondo se verificaron contra WCAG AA
+   (mínimo 4.5:1 para texto de cuerpo) — ver detalle en el checklist de la skill impeccable
+   de la sesión que armó esta paleta. */
 :root {
   --font-size: 16px;
   --background: #FAF7F2;
-  --foreground: #1C1008;
+  --foreground: #0A0E2E;
   --card: #FFFDF9;
-  --card-foreground: #1C1008;
+  --card-foreground: #0A0E2E;
   --popover: #FFFDF9;
-  --popover-foreground: #1C1008;
-  --primary: #C4501A;
+  --popover-foreground: #0A0E2E;
+  --primary: #7A1F3D;
   --primary-foreground: #FFFDF9;
-  --secondary: #F5EDE0;
-  --secondary-foreground: #1C1008;
-  --muted: #EDE4D4;
-  --muted-foreground: #8B6B4A;
-  --accent: #E8A020;
-  --accent-foreground: #1C1008;
+  --secondary: #F2D9DD;
+  --secondary-foreground: #0A0E2E;
+  --muted: #EFE6E1;
+  --muted-foreground: #6B5F68;
+  --accent: #C97B93;
+  --accent-foreground: #0A0E2E;
   --destructive: #d4183d;
   --destructive-foreground: #fff;
-  --border: rgb(139 107 74 / 18%);
+  --border: rgb(10 14 46 / 14%);
   --input: transparent;
-  --input-background: #F5EDE0;
-  --switch-background: #C8B49A;
+  --input-background: #F5E8EA;
+  --switch-background: #C9B8BE;
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --ring: rgb(196 80 26 / 35%);
-  --chart-1: oklch(64.6% 0.222 41.116deg);
+  --ring: rgb(122 31 61 / 35%);
+  --chart-1: oklch(39.6% 0.127 5.2deg);
   --chart-2: oklch(60% 0.118 184.704deg);
   --chart-3: oklch(39.8% 0.07 227.392deg);
   --chart-4: oklch(82.8% 0.189 84.429deg);
@@ -33,7 +39,7 @@
   --radius: 0.625rem;
   --sidebar: oklch(98.5% 0 0deg);
   --sidebar-foreground: oklch(14.5% 0 0deg);
-  --sidebar-primary: #030213;
+  --sidebar-primary: #0A0E2E;
   --sidebar-primary-foreground: oklch(98.5% 0 0deg);
   --sidebar-accent: oklch(97% 0 0deg);
   --sidebar-accent-foreground: oklch(20.5% 0 0deg);
@@ -42,35 +48,38 @@
 }
 
 .dark {
-  --background: #1C1008;
+  /* El fondo pasa a ser el navy del logo directamente — en dark mode, la app "es" el color
+     del isologo. Bordós y pastel se aclaran/reajustan para seguir dando ≥4.5:1 contra este
+     fondo oscuro (mismo criterio que el resto de la paleta). */
+  --background: #0A0E2E;
   --foreground: #FAF7F2;
-  --card: #261808;
+  --card: #12163A;
   --card-foreground: #FAF7F2;
-  --popover: #261808;
+  --popover: #12163A;
   --popover-foreground: #FAF7F2;
-  --primary: #E06030;
+  --primary: #A83D61;
   --primary-foreground: #FFFDF9;
-  --secondary: #3A2212;
+  --secondary: #241C2E;
   --secondary-foreground: #FAF7F2;
-  --muted: #3A2212;
-  --muted-foreground: #B08060;
-  --accent: #E8A020;
-  --accent-foreground: #1C1008;
+  --muted: #1E2240;
+  --muted-foreground: #B8A8B0;
+  --accent: #C9647E;
+  --accent-foreground: #0A0E2E;
   --destructive: oklch(39.6% 0.141 25.723deg);
   --destructive-foreground: oklch(63.7% 0.237 25.331deg);
-  --border: rgb(176 128 96 / 20%);
-  --input: #3A2212;
-  --ring: rgb(224 96 48 / 40%);
+  --border: rgb(184 92 116 / 22%);
+  --input: #241C2E;
+  --ring: rgb(168 61 97 / 40%);
   --font-weight-medium: 500;
   --font-weight-normal: 400;
-  --chart-1: oklch(48.8% 0.243 264.376deg);
+  --chart-1: oklch(51.9% 0.144 2.7deg);
   --chart-2: oklch(69.6% 0.17 162.48deg);
   --chart-3: oklch(76.9% 0.188 70.08deg);
   --chart-4: oklch(62.7% 0.265 303.9deg);
   --chart-5: oklch(64.5% 0.246 16.439deg);
   --sidebar: oklch(20.5% 0 0deg);
   --sidebar-foreground: oklch(98.5% 0 0deg);
-  --sidebar-primary: oklch(48.8% 0.243 264.376deg);
+  --sidebar-primary: #A83D61;
   --sidebar-primary-foreground: oklch(98.5% 0 0deg);
   --sidebar-accent: oklch(26.9% 0 0deg);
   --sidebar-accent-foreground: oklch(98.5% 0 0deg);
@@ -122,6 +131,14 @@
 @layer utilities {
   .font-display {
     font-family: 'Playfair Display', Georgia, serif;
+  }
+
+  /* Tipografía del isologo real (marcador grueso, conectado, rebote casual — ver el cartel
+     del local). Reservada para el wordmark "Los Hermanos" junto al logo (headers, hero) — NO
+     para títulos de pantallas de trabajo (dashboard, tablas, formularios), que siguen con
+     Inter: un logo tipográfico en cada encabezado de una tabla se leería como ruido, no marca. */
+  .font-brand {
+    font-family: Pacifico, cursive;
   }
 
   .scrollbar-hide {
