@@ -41,11 +41,11 @@ export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { car
                 <span className="text-sm text-muted-foreground font-mono">{formatCurrency(item.price)} c/u</span>
               </div>
               <div className="flex items-center gap-2">
-                <button onClick={() => onUpdateCart(item.id, -1)} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
+                <button onClick={() => onUpdateCart(item.id, -1)} data-testid={`qty-decrease-${item.id}`} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
                   {item.qty === 1 ? <Trash2 size={13} className="text-destructive" /> : <Minus size={13} />}
                 </button>
                 <span className="w-7 text-center font-mono font-bold">{item.qty}</span>
-                <button onClick={() => onUpdateCart(item.id, 1)} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
+                <button onClick={() => onUpdateCart(item.id, 1)} data-testid={`qty-increase-${item.id}`} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
                   <Plus size={13} />
                 </button>
               </div>
@@ -100,7 +100,7 @@ export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { car
             )}
           </div>
           <button onClick={() => name.trim() && phone.trim() && time && onConfirm(name.trim(), phone.trim(), time)}
-            disabled={!name.trim() || !phone.trim() || !time || isOpenNow === false}
+            disabled={!name.trim() || !phone.trim() || !time || isOpenNow === false} data-testid="confirm-order"
             className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
             {isOpenNow === false ? "Local cerrado" : "Confirmar Pedido"}
           </button>

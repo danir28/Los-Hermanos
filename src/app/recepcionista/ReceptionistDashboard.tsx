@@ -93,7 +93,7 @@ export function ReceptionistDashboard({ orders, onNavigate, onUpdateStatus }: { 
             </div>
             <div className="text-right shrink-0">
               <p className="text-sm font-semibold text-green-700">Retiro: {formatTimeLabel(order.estimatedTime!)}</p>
-              <button onClick={() => onUpdateStatus(order.id, "Entregado")} title="Caso excepcional: marcar entregado antes de que pase solo"
+              <button onClick={() => onUpdateStatus(order.id, "Entregado")} data-testid={`deliver-now-${order.id}`} title="Caso excepcional: marcar entregado antes de que pase solo"
                 className="mt-1.5 text-xs bg-green-50 text-green-700 border border-green-300 px-3 py-1 rounded-full hover:bg-green-100 transition-colors font-medium">
                 Marcar entregado ahora
               </button>

@@ -100,13 +100,13 @@ export default function AppCliente() {
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           <div className="flex">
             {[{ k: "home", l: "Inicio" }, { k: "menu", l: "Menú" }, { k: "tracking", l: "Seguir pedido" }].map(v => (
-              <button key={v.k} onClick={() => setCustomerView(v.k)}
+              <button key={v.k} onClick={() => setCustomerView(v.k)} data-testid={`nav-${v.k}`}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${customerView === v.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                 {v.l}
               </button>
             ))}
           </div>
-          <button onClick={() => setCustomerView("cart")} className="relative flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors py-3">
+          <button onClick={() => setCustomerView("cart")} data-testid="nav-cart" className="relative flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors py-3">
             <ShoppingCart size={17} /> Carrito
             {cartCount > 0 && (
               <span className="absolute -top-0 -right-4 w-5 h-5 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-mono font-bold">

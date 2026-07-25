@@ -76,7 +76,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
       <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
         <h1 className="font-display text-4xl font-bold">Nuevo Pedido</h1>
         {(orderCart.length > 0 || name || phone) && (
-          <button onClick={() => setShowCancelConfirm(true)}
+          <button onClick={() => setShowCancelConfirm(true)} data-testid="cancel-order"
             className="flex items-center gap-1.5 text-sm text-destructive border border-red-200 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl transition-colors font-medium">
             <X size={15} /> Cancelar pedido
           </button>
@@ -124,16 +124,16 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
                   </div>
                   {inCart ? (
                     <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => updateQty(p.id, -1)} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
+                      <button onClick={() => updateQty(p.id, -1)} data-testid={`qty-decrease-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
                         <Minus size={11} />
                       </button>
                       <span className="w-5 text-center font-mono font-bold text-sm">{inCart.qty}</span>
-                      <button onClick={() => updateQty(p.id, 1)} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
+                      <button onClick={() => updateQty(p.id, 1)} data-testid={`qty-increase-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
                         <Plus size={11} />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => addItem(p)} className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors shrink-0">
+                    <button onClick={() => addItem(p)} data-testid={`add-product-${p.id}`} className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors shrink-0">
                       <Plus size={15} />
                     </button>
                   )}
@@ -201,7 +201,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
               <CheckCircle size={18} /> ¡Pedido registrado!
             </div>
           ) : (
-            <button onClick={handleConfirm} disabled={!orderCart.length || !name.trim() || !phone.trim() || !time}
+            <button onClick={handleConfirm} disabled={!orderCart.length || !name.trim() || !phone.trim() || !time} data-testid="confirm-order"
               className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md">
               Confirmar Pedido
             </button>
