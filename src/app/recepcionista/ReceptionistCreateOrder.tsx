@@ -6,8 +6,8 @@ import { formatCurrency } from "../lib/format";
 import { ConfirmDialog, SlotPicker } from "../components/shared";
 
 // Datos del pedido que arma este formulario, para que AppStaff.tsx lo cree en el estado
-// compartido de orders. estimatedTime es opcional: si todos los turnos visibles están llenos,
-// se puede confirmar igual sin horario (cocina lo reprograma después, ver KitchenAssign).
+// compartido de orders. estimatedTime queda tipado string | null por compatibilidad con
+// AppStaff.tsx/api.ts, pero handleConfirm ya no permite llamar a onConfirm sin horario.
 type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string | null };
 
 // Formulario de carga manual de pedidos por parte de recepción o cocina (pedidos telefónicos o
@@ -46,19 +46,17 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
 
   const total = orderCart.reduce((s, i) => s + i.price * i.qty, 0);
 
-  // Valida que haya productos y datos del cliente cargados, muestra el cartel de "registrado"
-  // y recién después de una breve animación (1.2s) llama a onConfirm con el pedido armado —
-  // así AppStaff.tsx lo crea en el backend sin que se sienta instantáneo/brusco para quien lo
-  // carga. El horario NO es obligatorio acá (a diferencia del checkout online del cliente): si
-  // todos los turnos visibles están llenos, igual se puede cargar el pedido sin horario y
-  // reprogramarlo después desde cocina (ver KitchenAssign) — quien atiende el teléfono no
-  // debería quedar trabado si la grilla está completa.
+  // Valida que haya productos, horario y datos del cliente cargados (las tres condiciones son
+  // obligatorias, igual que en el checkout online del cliente — ver CustomerCart.tsx), muestra
+  // el cartel de "registrado" y recién después de una breve animación (1.2s) llama a onConfirm
+  // con el pedido armado, así AppStaff.tsx lo crea en el backend sin que se sienta
+  // instantáneo/brusco para quien lo carga.
   const handleConfirm = () => {
-    if (!orderCart.length || !name || !phone) return;
+    if (!orderCart.length || !name.trim() || !phone.trim() || !time) return;
     setConfirmed(true);
     setTimeout(() => {
       setConfirmed(false);
-      onConfirm({ customer: name, phone, items: orderCart, type: orderType, estimatedTime: time });
+      onConfirm({ customer: name.trim(), phone: phone.trim(), items: orderCart, type: orderType, estimatedTime: time });
       setRefreshSignal(s => s + 1);
     }, 1200);
   };
@@ -163,8 +161,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
 
           {/* Time slot */}
           <div className="bg-card border border-border rounded-2xl p-4">
-            <SlotPicker value={time} onChange={setTime} refreshSignal={refreshSignal} required={false} />
-            {!time && <p className="text-xs text-muted-foreground mt-1">Opcional: si no hay turnos libres, se puede cargar igual y reprogramar después.</p>}
+            <SlotPicker value={time} onChange={setTime} refreshSignal={refreshSignal} />
           </div>
 
           {/* Customer data */}
@@ -204,7 +201,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
               <CheckCircle size={18} /> ¡Pedido registrado!
             </div>
           ) : (
-            <button onClick={handleConfirm} disabled={!orderCart.length || !name || !phone}
+            <button onClick={handleConfirm} disabled={!orderCart.length || !name.trim() || !phone.trim() || !time}
               className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md">
               Confirmar Pedido
             </button>
