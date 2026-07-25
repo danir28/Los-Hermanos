@@ -32,3 +32,8 @@ yarn-error.log*
 
 # Log interno de task-observer (no es contenido del proyecto)
 skill-observations/
+
+# Salida de las corridas de Playwright (tests/e2e)
+test-results/
+playwright-report/
+blob-report/
