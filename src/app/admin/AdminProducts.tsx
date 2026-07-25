@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Pencil, Plus, Trash2, X } from "lucide-react";
+import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
 import type { Product } from "../types";
 import { api } from "../lib/api";
 import { useProducts } from "../lib/useProducts";
@@ -29,8 +29,17 @@ export function AdminProducts() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<Product | null>(null);
+  const [search, setSearch] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("Todos");
 
   const categoryOptions = categories.filter(c => c !== "Todos");
+  // Filtro de la lista (no del formulario de alta/edición): por categoría y por nombre, para
+  // que sea rápido encontrar un producto puntual entre los 61 y pispear a cambiarle el precio.
+  const filtered = products.filter(p => {
+    if (categoryFilter !== "Todos" && p.category !== categoryFilter) return false;
+    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
+    return true;
+  });
 
   const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setError(null); setFormOpen(true); };
   const openEdit = (p: Product) => { setEditingId(p.id); setForm(productToForm(p)); setError(null); setFormOpen(true); };
@@ -175,6 +184,24 @@ export function AdminProducts() {
         </div>
       )}
 
+      {!loading && (
+        <>
+          <div className="relative mb-3">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={16} />
+            <input type="text" placeholder="Buscar productos..." value={search} onChange={e => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2.5 border border-border rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm placeholder:text-muted-foreground" />
+          </div>
+          <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
+            {categories.map(cat => (
+              <button key={cat} onClick={() => setCategoryFilter(cat)}
+                className={`whitespace-nowrap px-3.5 py-1.5 rounded-full text-xs font-medium border transition-all ${categoryFilter === cat ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-card border-border text-foreground hover:border-primary/40"}`}>
+                {cat}
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+
       {loading ? (
         <p className="text-sm text-muted-foreground">Cargando catálogo…</p>
       ) : (
@@ -190,7 +217,7 @@ export function AdminProducts() {
               </tr>
             </thead>
             <tbody className="divide-y divide-border">
-              {products.map(p => (
+              {filtered.map(p => (
                 <tr key={p.id} className={p.active ? "" : "opacity-50"}>
                   <td className="px-4 py-2.5 font-medium">{p.name}</td>
                   <td className="px-4 py-2.5 text-muted-foreground">{p.category}</td>
@@ -220,7 +247,11 @@ export function AdminProducts() {
               ))}
             </tbody>
           </table>
-          {products.length === 0 && <p className="text-sm text-muted-foreground text-center py-8">Todavía no hay productos cargados.</p>}
+          {filtered.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-8">
+              {products.length === 0 ? "Todavía no hay productos cargados." : "Ningún producto coincide con la búsqueda."}
+            </p>
+          )}
         </div>
       )}
     </div>
