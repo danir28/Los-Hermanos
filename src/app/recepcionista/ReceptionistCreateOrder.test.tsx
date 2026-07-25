@@ -1,4 +1,4 @@
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "../lib/api";
@@ -14,11 +14,8 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-// No hay data-testid todavía (llega en una tanda aparte) — se ubica el botón "+" del producto
-// por la clase del card, el único selector estable disponible hoy.
 async function addProductToCart(user: ReturnType<typeof userEvent.setup>) {
-  const card = screen.getByText("Empanada de carne").closest(".rounded-xl") as HTMLElement;
-  await user.click(within(card).getByRole("button"));
+  await user.click(screen.getByTestId(`add-product-${PRODUCT.id}`));
 }
 
 async function setup() {

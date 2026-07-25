@@ -51,7 +51,7 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
             </thead>
             <tbody className="divide-y divide-border">
               {filtered.map(order => (
-                <tr key={order.id} className={`transition-colors hover:bg-secondary/40 ${order.status === "Cancelado" ? "opacity-60" : ""}`}>
+                <tr key={order.id} data-testid={`order-row-${order.id}`} className={`transition-colors hover:bg-secondary/40 ${order.status === "Cancelado" ? "opacity-60" : ""}`}>
                   <td className="px-4 py-3 font-mono font-bold text-primary">#{order.orderNumber}</td>
                   <td className="px-4 py-3 font-semibold whitespace-nowrap">{order.customer}</td>
                   <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{order.phone}</td>
@@ -65,7 +65,7 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
                   <td className="px-4 py-3"><TypePill type={order.type} /></td>
                   <td className="px-4 py-3">
                     {CAN_CANCEL.includes(order.status) && (
-                      <button onClick={() => setCancelTarget(order)}
+                      <button onClick={() => setCancelTarget(order)} data-testid={`cancel-order-row-${order.id}`}
                         className="flex items-center gap-1 text-xs text-destructive border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors font-medium whitespace-nowrap">
                         <X size={12} /> Cancelar
                       </button>

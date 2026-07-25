@@ -158,7 +158,7 @@ export function AdminReports() {
                 </thead>
                 <tbody className="divide-y divide-border">
                   {detailReport.orders.map(o => (
-                    <tr key={o.id}>
+                    <tr key={o.id} data-testid={`order-row-${o.id}`}>
                       <td className="px-4 py-2.5 font-mono text-primary font-semibold">#{o.orderNumber}</td>
                       <td className="px-4 py-2.5 font-medium">{o.customer}</td>
                       <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{formatOrderDate(o.createdAt)}</td>
