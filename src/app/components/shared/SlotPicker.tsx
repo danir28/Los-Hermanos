@@ -4,9 +4,11 @@ import { api, type SlotAvailability } from "../../lib/api";
 
 // Selector de turno de retiro, reusado en el checkout del cliente, la carga manual de
 // recepción/cocina y la reprogramación de cocina (ver server/src/orders/slots.ts para las
-// reglas de negocio: turnos de 5 en 5 minutos, cupo 4 por turno, no se puede elegir uno pasado).
-// Grilla de chips en vez de un <select> nativo: con ~48 turnos en el rango, es más rápido de
-// escanear visualmente para diferenciar "lleno" de "pasado" de "disponible".
+// reglas de negocio: turnos de 5 en 5 minutos, cupo 4 por turno, y un margen mínimo de
+// MIN_LEAD_MINUTES entre "ahora" y el turno para darle tiempo a cocina — no alcanza con que el
+// turno todavía no haya pasado). Grilla de chips en vez de un <select> nativo: con ~48 turnos en
+// el rango, es más rápido de escanear visualmente para diferenciar "lleno" de "sin margen" de
+// "disponible".
 //
 // refreshSignal es un valor cualquiera (ej. un contador) que el padre puede cambiar para forzar
 // un refetch de disponibilidad — se usa cuando el submit del formulario que contiene este picker
@@ -38,14 +40,14 @@ export function SlotPicker({ value, onChange, refreshSignal, required = true }: 
         {slots.map(slot => {
           const selected = value === slot.time;
           const disabled = !slot.available && !selected;
-          const full = !slot.isPast && slot.taken >= slot.capacity;
+          const full = !slot.tooSoon && slot.taken >= slot.capacity;
           return (
             <button
               key={slot.time}
               type="button"
               disabled={disabled}
               onClick={() => onChange(slot.time)}
-              title={slot.isPast ? "Ese horario ya pasó" : full ? "Ese horario ya no tiene cupos" : undefined}
+              title={slot.tooSoon ? "Ese horario ya no da tiempo a prepararlo" : full ? "Ese horario ya no tiene cupos" : undefined}
               className={`px-2 py-2 rounded-lg border text-xs font-mono font-semibold transition-colors ${
                 selected
                   ? "border-primary bg-primary text-primary-foreground"

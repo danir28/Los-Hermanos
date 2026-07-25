@@ -51,9 +51,10 @@ export type CreateOrderInput = {
 };
 export type UpdateOrderInput = { status?: OrderStatus; estimatedTime?: string };
 
-// Disponibilidad de un turno de retiro (ver SLOT_* en server/src/orders/slots.ts): cuántos
-// pedidos ya lo ocuparon sobre el cupo máximo, si ya pasó, y si todavía se puede elegir.
-export type SlotAvailability = { time: string; taken: number; capacity: number; isPast: boolean; available: boolean };
+// Disponibilidad de un turno de retiro (ver SLOT_*/MIN_LEAD_MINUTES en server/src/orders/slots.ts):
+// cuántos pedidos ya lo ocuparon sobre el cupo máximo, si ya está demasiado cerca para darle
+// tiempo a cocina (o directamente pasado), y si todavía se puede elegir.
+export type SlotAvailability = { time: string; taken: number; capacity: number; tooSoon: boolean; available: boolean };
 export type TopProduct = { name: string; qty: number; revenue: number };
 // Ventas entregadas de un día puntual del mes (day: 1-31) — usada para el gráfico de línea.
 export type DailySales = { day: number; total: number };

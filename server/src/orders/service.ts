@@ -2,7 +2,7 @@ import { isBusinessOpenNow } from "../businessHours/service.js";
 import { db } from "../db.js";
 import type { Order, OrderItem } from "../generated/prisma/client.js";
 import { argentinaWallTimeToUtc, businessDayFor } from "./businessDay.js";
-import { assertValidSlotOrThrow, generateSlots, isSlotInPast, parseTime, SLOT_CAPACITY, SlotFullError } from "./slots.js";
+import { assertValidSlotOrThrow, generateSlots, isSlotTooSoon, parseTime, SLOT_CAPACITY, SlotFullError } from "./slots.js";
 import type { CreateOrderInput, OrderDTO, UpdateOrderInput } from "./types.js";
 
 export class OrderNotFoundError extends Error {
@@ -113,9 +113,10 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
 }
 
 // Disponibilidad de cada turno de la jornada comercial dada (hoy por defecto): cuántos pedidos
-// ya lo ocuparon, si ya pasó, y si todavía se puede elegir. La usa el SlotPicker del frontend
-// (GET /api/orders/slots) para no dejar elegir un turno lleno o vencido desde la UI, aunque el
-// backend igual lo vuelve a validar en createOrder/updateOrder por las dudas.
+// ya lo ocuparon, si ya está demasiado cerca para darle tiempo a cocina (o directamente pasado),
+// y si todavía se puede elegir. La usa el SlotPicker del frontend (GET /api/orders/slots) para
+// no dejar elegir un turno lleno o sin margen desde la UI, aunque el backend igual lo vuelve a
+// validar en createOrder/updateOrder por las dudas.
 export async function getSlotAvailability(businessDate: Date = businessDayFor(new Date())) {
   const counts = await db.order.groupBy({
     by: ["estimatedTime"],
@@ -126,8 +127,8 @@ export async function getSlotAvailability(businessDate: Date = businessDayFor(ne
 
   return generateSlots().map(time => {
     const taken = takenBySlot.get(time) ?? 0;
-    const isPast = isSlotInPast(time, businessDate);
-    return { time, taken, capacity: SLOT_CAPACITY, isPast, available: taken < SLOT_CAPACITY && !isPast };
+    const tooSoon = isSlotTooSoon(time, businessDate);
+    return { time, taken, capacity: SLOT_CAPACITY, tooSoon, available: taken < SLOT_CAPACITY && !tooSoon };
   });
 }
 

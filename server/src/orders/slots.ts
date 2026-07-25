@@ -15,6 +15,12 @@ export const SLOT_STEP_MINUTES = 5;
 export const SLOT_RANGE_START = "19:00";
 export const SLOT_RANGE_END = "22:55"; // último turno reservable: garantiza que el retiro más tardío sea a las 23:00
 export const SLOT_CAPACITY = 4;
+// Margen mínimo entre "ahora" y el turno elegible, para darle tiempo a cocina de prepararlo
+// (pedido del 24/7/2026: a las 19:00, el primer turno elegible tiene que ser 19:20, no 19:00 ni
+// 19:05 — y cerca del cierre, un turno a solo 19 minutos, como 22:55 siendo las 22:36, tampoco
+// debería poder elegirse). Un turno ya pasado queda cubierto por la misma regla sin caso
+// aparte: "pasado" es sólo el caso extremo de "no da el margen".
+export const MIN_LEAD_MINUTES = 20;
 
 const TIME_FORMAT = /^([01]\d|2[0-3]):[0-5]\d$/; // mismo regex que businessHours/service.ts
 
@@ -72,19 +78,22 @@ export function generateSlots(): string[] {
 }
 
 // Compara el turno (hora de pared en Argentina, dentro de la jornada comercial dada) contra el
-// instante real — reusa argentinaWallTimeToUtc (businessDay.ts), mismo patrón que isOpenAt en
-// businessHours/service.ts, para no reimplementar el manejo del offset fijo en un tercer lugar.
-export function isSlotInPast(slot: string, businessDate: Date, now: Date = new Date()): boolean {
+// instante real más el margen de preparación — reusa argentinaWallTimeToUtc (businessDay.ts),
+// mismo patrón que isOpenAt en businessHours/service.ts, para no reimplementar el manejo del
+// offset fijo en un tercer lugar. Un turno ya estrictamente pasado también da true acá: "pasado"
+// es el caso límite de "falta menos de MIN_LEAD_MINUTES", no hace falta chequearlo aparte.
+export function isSlotTooSoon(slot: string, businessDate: Date, now: Date = new Date()): boolean {
   const { hours, minutes } = parseTime(slot);
   const slotUtc = argentinaWallTimeToUtc(businessDate, hours, minutes);
-  return slotUtc.getTime() <= now.getTime();
+  const threshold = now.getTime() + MIN_LEAD_MINUTES * 60_000;
+  return slotUtc.getTime() < threshold;
 }
 
-// Valida formato + rango + que no esté pasado; tira InvalidSlotError con el motivo puntual.
-// Usada por createOrder/updateOrder antes de chequear cupo — no tiene sentido contar ocupación
-// de un turno que ni siquiera es válido.
+// Valida formato + rango + que dé el margen de preparación; tira InvalidSlotError con el motivo
+// puntual. Usada por createOrder/updateOrder antes de chequear cupo — no tiene sentido contar
+// ocupación de un turno que ni siquiera es válido.
 export function assertValidSlotOrThrow(slot: string, businessDate: Date, now: Date = new Date()): void {
   if (!isSlotFormatValid(slot)) throw new InvalidSlotError('debe tener formato "HH:mm"');
   if (!isSlotInRange(slot)) throw new InvalidSlotError(`debe estar entre ${SLOT_RANGE_START} y ${SLOT_RANGE_END}, en pasos de ${SLOT_STEP_MINUTES} minutos`);
-  if (isSlotInPast(slot, businessDate, now)) throw new InvalidSlotError("ese horario ya pasó");
+  if (isSlotTooSoon(slot, businessDate, now)) throw new InvalidSlotError(`no da tiempo a prepararlo — hace falta elegir un horario con al menos ${MIN_LEAD_MINUTES} minutos de anticipación`);
 }
