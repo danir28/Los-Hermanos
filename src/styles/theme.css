@@ -45,6 +45,18 @@
   --sidebar-accent-foreground: oklch(20.5% 0 0deg);
   --sidebar-border: oklch(92.2% 0 0deg);
   --sidebar-ring: oklch(70.8% 0 0deg);
+
+  /* Paleta de marca del sistema "Mostrador" (isotipo + wordmark, referencia de marca del
+     25/7/2026) — independiente de la paleta de la rotisería de arriba: esa es la marca del
+     cliente (usada en toda la UI de trabajo); esta es la marca del software en sí, reservada
+     para el isotipo/wordmark/watermark de src/app/components/shared/Mostrador*.tsx. Fija en
+     light y dark (no se redeclara en .dark) porque el isotipo debe verse igual sea cual sea
+     el tema de la app — no es un color funcional del sistema de diseño, es un logo. */
+  --mostrador-carbon: #2B2622;
+  --mostrador-brasa: #B5471B;
+  --mostrador-brasa-oscuro: #7A2E10;
+  --mostrador-piedra: #6B655D;
+  --mostrador-hueso: #F1EDE3;
 }
 
 .dark {
@@ -126,6 +138,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-mostrador-carbon: var(--mostrador-carbon);
+  --color-mostrador-brasa: var(--mostrador-brasa);
+  --color-mostrador-brasa-oscuro: var(--mostrador-brasa-oscuro);
+  --color-mostrador-piedra: var(--mostrador-piedra);
+  --color-mostrador-hueso: var(--mostrador-hueso);
 }
 
 @layer utilities {
@@ -139,6 +156,17 @@
      Inter: un logo tipográfico en cada encabezado de una tabla se leería como ruido, no marca. */
   .font-brand {
     font-family: Pacifico, cursive;
+  }
+
+  /* Tipografías del kit de marca del sistema "Mostrador" (no confundir con .font-brand, que
+     es el isologo de la rotisería). Bricolage Grotesque para el nombre "Mostrador", IBM Plex
+     Sans para su tagline/watermark — ver src/app/components/shared/Mostrador*.tsx. */
+  .font-mostrador-display {
+    font-family: 'Bricolage Grotesque', sans-serif;
+  }
+
+  .font-mostrador-body {
+    font-family: 'IBM Plex Sans', sans-serif;
   }
 
   .scrollbar-hide {

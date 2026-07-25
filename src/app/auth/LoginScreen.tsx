@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { LogIn } from "lucide-react";
 import { useAuth } from "./AuthContext";
+import { MostradorWatermark } from "../components/shared";
 import logo from "../../assets/logo.png";
 
 // Pantalla de login del staff (recepción/cocina/admin): usuario + contraseña contra
@@ -60,6 +61,8 @@ export function LoginScreen() {
           className="w-full bg-primary text-primary-foreground py-3 rounded-xl font-bold hover:bg-primary/90 transition-colors disabled:opacity-40 flex items-center justify-center gap-2">
           <LogIn size={17} /> {loading ? "Ingresando…" : "Ingresar"}
         </button>
+
+        <MostradorWatermark />
       </form>
     </div>
   );

@@ -4,3 +4,6 @@ export { RoleNavTabs, type NavTab } from "./RoleNavTabs";
 export { ConfirmDialog } from "./ConfirmDialog";
 export { SlotPicker } from "./SlotPicker";
 export { OrderTicket } from "./OrderTicket";
+export { MostradorIcon } from "./MostradorIcon";
+export { MostradorWordmark } from "./MostradorWordmark";
+export { MostradorWatermark } from "./MostradorWatermark";
