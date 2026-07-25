@@ -1,15 +1,16 @@
 import { useState } from "react";
 import { ShoppingCart, Search, Plus } from "lucide-react";
 import type { CartItem, Product } from "../types";
-import { PRODUCTS, CATEGORIES } from "../data/products";
+import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 
 // Pantalla de menú del cliente: filtro por categoría, búsqueda y agregado de productos al carrito.
 export function CustomerMenu({ cart, onAddToCart, onNavigate }: { cart: CartItem[]; onAddToCart: (p: Product) => void; onNavigate: (v: string) => void }) {
+  const { products, categories } = useProducts();
   const [category, setCategory] = useState("Todos");
   const [search, setSearch] = useState("");
 
-  const filtered = PRODUCTS.filter(p => {
+  const filtered = products.filter(p => {
     if (!p.active) return false;
     if (category !== "Todos" && p.category !== category) return false;
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -37,7 +38,7 @@ export function CustomerMenu({ cart, onAddToCart, onNavigate }: { cart: CartItem
           className="w-full pl-11 pr-4 py-3 border border-border rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 text-foreground placeholder:text-muted-foreground" />
       </div>
       <div className="flex gap-2 overflow-x-auto pb-2 mb-8 scrollbar-hide">
-        {CATEGORIES.map(cat => (
+        {categories.map(cat => (
           <button key={cat} onClick={() => setCategory(cat)}
             className={`whitespace-nowrap px-4 py-2 rounded-full text-sm font-medium border transition-all ${category === cat ? "bg-primary text-primary-foreground border-primary shadow-sm" : "bg-card border-border text-foreground hover:border-primary/40"}`}>
             {cat}

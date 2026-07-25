@@ -9,6 +9,7 @@ import { fudoRouter } from "./integrations/fudo/routes.js";
 import { whatsappRouter } from "./integrations/whatsapp/routes.js";
 import { ordersRouter } from "./orders/routes.js";
 import { advanceScheduledOrders } from "./orders/service.js";
+import { productsRouter } from "./products/routes.js";
 import { reportsRouter } from "./reports/routes.js";
 
 const app = express();
@@ -24,6 +25,7 @@ app.use("/api/business-hours", businessHoursRouter);
 app.use("/api/fudo", fudoRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/orders", ordersRouter);
+app.use("/api/products", productsRouter);
 app.use("/api/reports", reportsRouter);
 
 // Middleware de error global: atrapa lo que asyncHandler reenvía con next(err) para que

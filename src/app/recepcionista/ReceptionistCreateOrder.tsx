@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, CheckCircle, Plus, Minus, X } from "lucide-react";
 import type { CartItem, OrderType, Product } from "../types";
-import { PRODUCTS, CATEGORIES } from "../data/products";
+import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 import { ConfirmDialog, SlotPicker } from "../components/shared";
 
@@ -13,6 +13,7 @@ type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]
 // Formulario de carga manual de pedidos por parte de recepción o cocina (pedidos telefónicos o
 // presenciales) — 100% agnóstico de rol, solo recibe onConfirm, por eso lo reusa también cocina.
 export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewReceptionistOrder) => void }) {
+  const { products, categories } = useProducts();
   const [orderCart, setOrderCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -24,7 +25,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
   const [confirmed, setConfirmed] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
 
-  const filtered = PRODUCTS.filter(p => {
+  const filtered = products.filter(p => {
     if (!p.active || p.outOfStock) return false;
     if (category !== "Todos" && p.category !== category) return false;
     if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
@@ -104,7 +105,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
               className="w-full pl-9 pr-3 py-2.5 border border-border rounded-xl bg-card focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm placeholder:text-muted-foreground" />
           </div>
           <div className="flex gap-2 overflow-x-auto pb-2 mb-4 scrollbar-hide">
-            {CATEGORIES.map(c => (
+            {categories.map(c => (
               <button key={c} onClick={() => setCategory(c)}
                 className={`whitespace-nowrap px-3 py-1 rounded-full text-xs font-semibold border transition-colors ${category === c ? "bg-primary text-primary-foreground border-primary" : "bg-card border-border hover:border-primary/40"}`}>
                 {c}

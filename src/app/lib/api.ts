@@ -1,4 +1,4 @@
-import type { Order, OrderStatus, OrderType } from "../types";
+import type { Order, OrderStatus, OrderType, Product } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
@@ -67,6 +67,19 @@ export type LoginResult = { token: string; user: UserProfile };
 export type DaySchedule = { dayOfWeek: number; isOpen: boolean; openTime: string; closeTime: string };
 export type BusinessHours = { days: DaySchedule[]; isOpenNow: boolean };
 
+// Datos para crear/editar un producto del catálogo (ver server/src/products/types.ts).
+export type CreateProductInput = {
+  name: string;
+  category: string;
+  price: number;
+  description: string;
+  image: string;
+  featured: boolean;
+  active: boolean;
+  outOfStock: boolean;
+};
+export type UpdateProductInput = Partial<CreateProductInput>;
+
 export const api = {
   // ── Auth (pública la de login; el resto exige un token ya emitido) ─────────
   // Login de staff: valida usuario/contraseña contra el backend y devuelve el token JWT + perfil.
@@ -132,4 +145,17 @@ export const api = {
   // Solo-admin: reemplaza el horario de la semana completa.
   businessHoursUpdate: (token: string, days: DaySchedule[]) =>
     request<BusinessHours>("/api/business-hours", { method: "PUT", token, body: JSON.stringify({ days }) }),
+
+  // ── Catálogo de productos ────────────────────────────────────────────────
+  // Pública: la usa la app de cliente (menú, carta QR de mostrador) y la carga manual de
+  // recepción/cocina — reemplaza el array PRODUCTS que antes vivía hardcodeado en el frontend.
+  productsList: () => request<Product[]>("/api/products"),
+  // Solo-admin: alta/edición/baja de productos — ver memoria de proyecto sobre por qué el
+  // catálogo lo carga el admin a mano en vez de sincronizarse con FUDO.
+  productsCreate: (token: string, input: CreateProductInput) =>
+    request<Product>("/api/products", { method: "POST", token, body: JSON.stringify(input) }),
+  productsUpdate: (token: string, id: number, patch: UpdateProductInput) =>
+    request<Product>(`/api/products/${id}`, { method: "PATCH", token, body: JSON.stringify(patch) }),
+  productsDelete: (token: string, id: number) =>
+    request<{ ok: boolean }>(`/api/products/${id}`, { method: "DELETE", token }),
 };

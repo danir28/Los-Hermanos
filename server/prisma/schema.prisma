@@ -118,6 +118,33 @@ model BusinessHours {
   @@map("business_hours")
 }
 
+// Catálogo real del local (reemplaza el array hardcodeado que vivía en
+// src/app/data/products.ts) — ver server/src/products/. id queda como Int autoincrement, no
+// uuid, a propósito: el frontend ya maneja Product.id/CartItem.id como number en todo el árbol
+// (carrito, pedidos manuales, etc.), así que un entero evita un cambio de tipo en cascada que
+// nadie pidió. category es texto libre, misma convención que Order.status/Order.type — no hay
+// una entidad Category separada porque nadie necesita gestionar categorías de forma
+// independiente todavía; el admin simplemente escribe la categoría al cargar un producto. Se
+// lista ordenado por id (ver listProducts en products/service.ts) para que las categorías, al
+// derivarse en el frontend por orden de primera aparición, conserven el orden curado con el que
+// se cargó el catálogo real la primera vez.
+model Product {
+  id          Int      @id @default(autoincrement())
+  name        String
+  category    String
+  price       Decimal  @db.Decimal(10, 2)
+  description String
+  image       String
+  featured    Boolean  @default(false)
+  active      Boolean  @default(true)
+  outOfStock  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([category])
+  @@map("products")
+}
+
 // Usuario interno (recepción, cocina, admin) con acceso a la app de staff. Alta solo por
 // script de seed en este sprint (sin pantalla CRUD todavía). rol queda como String, no enum
 // de Prisma, misma convención que Order.status/Order.type — los valores válidos

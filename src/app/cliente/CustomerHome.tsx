@@ -1,6 +1,6 @@
 import { Fragment } from "react";
 import { ShoppingCart, Clock, Phone, Flame } from "lucide-react";
-import { PRODUCTS } from "../data/products";
+import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 import type { BusinessHours, DaySchedule } from "../lib/api";
 
@@ -33,7 +33,8 @@ function groupSchedule(days: DaySchedule[]): { label: string; text: string }[] {
 
 // Pantalla de inicio del cliente: hero con horarios, categorías rápidas y productos destacados del día.
 export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: string) => void; businessHours: BusinessHours | null }) {
-  const featured = PRODUCTS.filter(p => p.featured && p.active && !p.outOfStock);
+  const { products } = useProducts();
+  const featured = products.filter(p => p.featured && p.active && !p.outOfStock);
   const scheduleGroups = businessHours ? groupSchedule(businessHours.days) : [];
   return (
     <div>

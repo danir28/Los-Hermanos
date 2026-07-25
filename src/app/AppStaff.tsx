@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   Clock, LayoutDashboard, ClipboardList, PlusCircle,
-  ChefHat, BarChart3, FileBarChart, LogOut,
+  ChefHat, BarChart3, FileBarChart, LogOut, UtensilsCrossed,
 } from "lucide-react";
 import type { CartItem, Order, OrderStatus, OrderType } from "./types";
 import { api, type UserRole } from "./lib/api";
 import { AuthProvider, LoginScreen, useAuth } from "./auth";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
 import { KitchenPanel, KitchenAssign } from "./cocina";
-import { AdminBusinessHours, AdminDashboard, AdminReports } from "./admin";
+import { AdminBusinessHours, AdminDashboard, AdminProducts, AdminReports } from "./admin";
 import { OrderTicket, RoleNavTabs, type NavTab } from "./components/shared";
 
 // ─── App privada de staff ───────────────────────────────────────────────────
@@ -44,9 +44,10 @@ const KITCHEN_TABS: NavTab[] = [
 // intacto por si se retoma en un proyecto futuro y separado, pero no tiene sentido mostrárselo
 // al cliente acá.
 const ADMIN_TABS: NavTab[] = [
-  { key: "dashboard",     label: "Dashboard",    Icon: BarChart3    },
-  { key: "reportes",      label: "Reportes",     Icon: FileBarChart },
-  { key: "horarios",      label: "Horario",      Icon: Clock        },
+  { key: "dashboard",     label: "Dashboard",    Icon: BarChart3        },
+  { key: "reportes",      label: "Reportes",     Icon: FileBarChart     },
+  { key: "horarios",      label: "Horario",      Icon: Clock            },
+  { key: "productos",     label: "Productos",    Icon: UtensilsCrossed  },
 ];
 
 // Vista inicial de staffView al entrar a cada sección (la primera pestaña de cada una).
@@ -236,6 +237,7 @@ function AppStaffContent() {
           {staffView === "dashboard"     && <AdminDashboard orders={orders} />}
           {staffView === "reportes"      && <AdminReports />}
           {staffView === "horarios"      && <AdminBusinessHours />}
+          {staffView === "productos"     && <AdminProducts />}
         </>
       )}
 
