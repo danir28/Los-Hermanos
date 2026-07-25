@@ -15,7 +15,18 @@ const TEST_DATABASE_URL = "postgresql://los_hermanos_app:los_hermanos7@localhost
 // (server/prisma/seed.ts) — así los specs loguean contra credenciales reales, no un mock de
 // auth. Todo es idempotente (upsert por usuario / findFirst+update por nombre de producto), así
 // que correr la suite varias veces no acumula cuentas ni productos duplicados.
+//
+// Antes que nada, limpia los pedidos que hayan quedado de corridas anteriores (los specs crean
+// pedidos reales y nunca los borran solos) — sin esto, pueden acumularse turnos ocupados que
+// además interfieren con el test de concurrencia del backend (server/src/orders/service.test.ts)
+// si se corre poco después, en el mismo turno del día.
 export default async function globalSetup() {
+  execFileSync("npx", ["tsx", "tests/fixtures/resetE2EOrders.ts"], {
+    cwd: SERVER_DIR,
+    stdio: "inherit",
+    env: { ...process.env, DATABASE_URL: TEST_DATABASE_URL },
+  });
+
   for (const { usuario, password, rol } of Object.values(TEST_USERS)) {
     execFileSync("npx", ["tsx", "prisma/seed.ts"], {
       cwd: SERVER_DIR,

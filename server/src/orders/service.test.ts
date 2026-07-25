@@ -1,5 +1,5 @@
 import { randomUUID } from "node:crypto";
-import { afterAll, afterEach, describe, expect, it } from "vitest";
+import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "../../tests/helpers/resetDb.js";
 import { db } from "../db.js";
 import { argentinaWallTimeToUtc, businessDayFor } from "./businessDay.js";
@@ -32,6 +32,12 @@ function usableSlotForToday(bufferMinutes = MIN_LEAD_MINUTES + 10): string | nul
 const slot = usableSlotForToday();
 const items = [{ name: "Empanada de carne", qty: 2, price: 1500 }];
 
+// beforeEach (no solo afterEach): esto garantiza arrancar cada test con la base realmente en
+// cero, sin importar qué haya quedado de afuera de este archivo — ej. pedidos reales que dejan
+// los specs de Playwright (tests/e2e/), que nunca se borran solos y podían coincidir con el
+// mismo turno que usa el test de concurrencia de acá, haciendo que el cupo pareciera lleno antes
+// de que este archivo creara un solo pedido.
+beforeEach(resetDb);
 afterEach(resetDb);
 afterAll(async () => {
   await db.$disconnect();
