@@ -1,39 +1,7 @@
-import cors from "cors";
-import express from "express";
-import type { NextFunction, Request, Response } from "express";
-import { authRouter } from "./auth/routes.js";
-import { businessHoursRouter } from "./businessHours/routes.js";
+import { app } from "./app.js";
 import { config } from "./config.js";
 import { db } from "./db.js";
-import { fudoRouter } from "./integrations/fudo/routes.js";
-import { whatsappRouter } from "./integrations/whatsapp/routes.js";
-import { ordersRouter } from "./orders/routes.js";
 import { advanceScheduledOrders } from "./orders/service.js";
-import { productsRouter } from "./products/routes.js";
-import { reportsRouter } from "./reports/routes.js";
-
-const app = express();
-
-app.use(cors({ origin: config.corsOrigin }));
-app.use(express.json());
-
-// Chequeo de salud del backend, público y sin dependencias (no toca la DB): solo confirma
-// que el proceso está arriba y respondiendo.
-app.get("/api/health", (_req, res) => res.json({ ok: true }));
-app.use("/api/auth", authRouter);
-app.use("/api/business-hours", businessHoursRouter);
-app.use("/api/fudo", fudoRouter);
-app.use("/api/whatsapp", whatsappRouter);
-app.use("/api/orders", ordersRouter);
-app.use("/api/products", productsRouter);
-app.use("/api/reports", reportsRouter);
-
-// Middleware de error global: atrapa lo que asyncHandler reenvía con next(err) para que
-// un error de un handler async devuelva 500 en vez de dejar el request colgado.
-app.use((err: unknown, _req: Request, res: Response, _next: NextFunction) => {
-  console.error(err);
-  res.status(500).json({ error: err instanceof Error ? err.message : "Error interno del servidor" });
-});
 
 const server = app.listen(config.port, () => {
   console.log(`Servidor escuchando en http://localhost:${config.port}`);
