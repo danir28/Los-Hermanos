@@ -74,9 +74,13 @@ export type UserRole = "recepcionista" | "cocina" | "admin";
 export type UserProfile = { id: string; usuario: string; rol: UserRole; nombre: string; email: string; activo: boolean };
 export type LoginResult = { token: string; user: UserProfile };
 
-// Horario de un día de la semana (0=domingo..6=sábado, igual a Date#getDay()). openTime/closeTime
-// en formato "HH:mm"; si closeTime <= openTime el cierre cruza la medianoche (ver isOpenAt del backend).
-export type DaySchedule = { dayOfWeek: number; isOpen: boolean; openTime: string; closeTime: string };
+// Una franja horaria en formato "HH:mm"; si closeTime <= openTime la franja cruza la
+// medianoche (ver isOpenAt del backend).
+export type TimeRange = { openTime: string; closeTime: string };
+// Horario de un día de la semana (0=domingo..6=sábado, igual a Date#getDay()). `ranges` soporta
+// horario partido (ej. abre 11-15 y vuelve a abrir 19-23 el mismo día); un día cerrado tiene
+// `ranges: []`.
+export type DaySchedule = { dayOfWeek: number; isOpen: boolean; ranges: TimeRange[] };
 export type BusinessHours = { days: DaySchedule[]; isOpenNow: boolean };
 
 // Datos para crear/editar un producto del catálogo (ver server/src/products/types.ts).

@@ -105,14 +105,17 @@ model OrderItem {
 // Horario de atención del local, una fila por día de la semana (0=domingo..6=sábado,
 // mismo criterio que Date#getUTCDay()). Lo edita el admin (PUT /api/business-hours) y lo
 // lee el cliente (GET público) para mostrar el horario y bloquear el checkout online
-// fuera de horario. openTime/closeTime en formato "HH:mm"; si closeTime <= openTime se
-// interpreta que el cierre cruza la medianoche (ver isOpenAt en businessHours/service.ts),
-// igual que la rotisería ya opera hoy (abre hasta ~2am, ver orders/businessDay.ts).
+// fuera de horario. `ranges` es un array JSON de `{ openTime, closeTime }` (formato "HH:mm")
+// para soportar horario partido (ej. abre 11-15 y vuelve a abrir 19-23 el mismo día); si
+// closeTime <= openTime dentro de una franja, esa franja cruza la medianoche (ver isOpenAt
+// en businessHours/service.ts), igual que la rotisería ya opera hoy (abre hasta ~2am, ver
+// orders/businessDay.ts). Un JSON por día (no una tabla hija) porque siempre se lee/escribe
+// la franja completa de un día de una sola vez (PUT reemplaza la semana entera) — no hace
+// falta filtrar ni ordenar franjas individuales por SQL.
 model BusinessHours {
   dayOfWeek Int      @id
   isOpen    Boolean  @default(true)
-  openTime  String
-  closeTime String
+  ranges    Json
   updatedAt DateTime @updatedAt
 
   @@map("business_hours")

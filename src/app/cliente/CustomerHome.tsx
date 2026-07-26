@@ -10,8 +10,15 @@ import logo from "../../assets/logo.png";
 const DISPLAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_SHORT: Record<number, string> = { 0: "Dom", 1: "Lun", 2: "Mar", 3: "Mié", 4: "Jue", 5: "Vie", 6: "Sáb" };
 
+// Texto de las franjas de un día, ej. "11:00 – 15:00" o, con horario partido,
+// "11:00 – 15:00, 19:00 – 23:00".
+function formatRanges(day: DaySchedule): string {
+  if (!day.isOpen || day.ranges.length === 0) return "Cerrado";
+  return day.ranges.map(r => `${r.openTime} – ${r.closeTime}`).join(", ");
+}
+
 function sameSchedule(a: DaySchedule, b: DaySchedule): boolean {
-  return a.isOpen === b.isOpen && a.openTime === b.openTime && a.closeTime === b.closeTime;
+  return a.isOpen === b.isOpen && formatRanges(a) === formatRanges(b);
 }
 
 // Agrupa días consecutivos (en orden lunes→domingo) con el mismo horario, para mostrar
@@ -28,7 +35,7 @@ function groupSchedule(days: DaySchedule[]): { label: string; text: string }[] {
     const first = group[0];
     const last = group[group.length - 1];
     const label = first.dayOfWeek === last.dayOfWeek ? DAY_SHORT[first.dayOfWeek] : `${DAY_SHORT[first.dayOfWeek]}–${DAY_SHORT[last.dayOfWeek]}`;
-    return { label, text: first.isOpen ? `${first.openTime} – ${first.closeTime}` : "Cerrado" };
+    return { label, text: formatRanges(first) };
   });
 }
 
