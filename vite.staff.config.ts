@@ -10,6 +10,11 @@ import { figmaAssetResolver, sharedConfig } from './vite.shared'
 // optimice bien un grafo compartido.
 export default defineConfig({
   ...sharedConfig,
+  // Propio de esta app (no "public/" a secas, compartido con cliente): solo trae
+  // _redirects, que le dice a Netlify que sirva index.staff.html para cualquier ruta —
+  // sin esto, el build genera dist-staff/index.staff.html (no index.html), y Netlify
+  // no encuentra nada que servir en "/" y muestra su 404 genérico.
+  publicDir: 'public-staff',
   plugins: [
     figmaAssetResolver(),
     react(),
