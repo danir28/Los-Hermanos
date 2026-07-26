@@ -78,10 +78,10 @@ export default function AppCliente() {
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
-          <div className="flex items-center gap-2.5 px-2">
+          <button onClick={() => setCustomerView("home")} data-testid="header-home" className="flex items-center gap-2.5 px-2 hover:opacity-80 transition-opacity">
             <img src={logo} alt="" className="w-9 h-9 object-contain" />
             <p className="font-brand text-xl leading-none text-primary">Los Hermanos</p>
-          </div>
+          </button>
           {businessHours && (
             businessHours.isOpenNow ? (
               <div className="flex items-center gap-1.5 text-xs text-green-700 bg-green-50 border border-green-200 px-2.5 py-1 rounded-full font-medium">

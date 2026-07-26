@@ -118,8 +118,16 @@ function AppStaffContent() {
     return () => clearTimeout(timer);
   }, [printOrder]);
 
-  // Carga los pedidos reales desde el backend una vez que hay sesión (GET /api/orders pasó a
-  // ser solo-staff, necesita el token), y los vuelve a pedir cada 30s. Antes alcanzaba con
+  // Trae los pedidos del backend y actualiza el estado. La comparten la carga inicial de sesión,
+  // el polling de fondo de más abajo, y el botón del header que vuelve a la vista principal de
+  // la sección (ver goToSectionHome) — todos necesitan el mismo fetch, solo cambia si avisan con
+  // un alert cuando falla.
+  const refreshOrders = () => {
+    if (!token) return Promise.resolve();
+    return api.ordersList(token).then(setOrders);
+  };
+
+  // Carga los pedidos una vez que hay sesión y los vuelve a pedir cada 30s. Antes alcanzaba con
   // cargarlos una sola vez al loguearse porque todo cambio de estado era manual (alguien lo
   // hacía clickeando acá mismo, así que el estado local ya quedaba al día). Desde que los
   // pedidos avanzan de estado solos según el reloj (ver advanceScheduledOrders en el backend),
@@ -130,12 +138,8 @@ function AppStaffContent() {
     // Solo la primera carga avisa con un alert si falla — un refresco de fondo que falla (ej.
     // un corte de red momentáneo) se reintenta solo en el próximo ciclo de 30s, sin interrumpir
     // a quien esté trabajando con un alert cada 30 segundos.
-    api.ordersList(token)
-      .then(setOrders)
-      .catch(e => window.alert(e instanceof Error ? e.message : "Error al cargar los pedidos"));
-    const interval = setInterval(() => {
-      api.ordersList(token).then(setOrders).catch(() => {});
-    }, 30_000);
+    refreshOrders().catch(e => window.alert(e instanceof Error ? e.message : "Error al cargar los pedidos"));
+    const interval = setInterval(() => { refreshOrders().catch(() => {}); }, 30_000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -188,6 +192,14 @@ function AppStaffContent() {
     }
   };
 
+  // Tocar el logo/nombre de la sección en el header vuelve a la vista principal de esa sección
+  // (dashboard para recepción/admin, panel para cocina — ver STAFF_DEFAULT_VIEW) y refresca los
+  // pedidos al toque, en vez de esperar hasta 30s del polling de fondo.
+  const goToSectionHome = () => {
+    setStaffView(STAFF_DEFAULT_VIEW[user.rol]);
+    refreshOrders().catch(e => window.alert(e instanceof Error ? e.message : "Error al actualizar los pedidos"));
+  };
+
   const section = SECTION_LABEL[user.rol];
 
   // El ticket (más abajo) tiene que quedar FUERA de este div al imprimir: si quedara adentro,
@@ -202,10 +214,10 @@ function AppStaffContent() {
     <div className="min-h-screen bg-background print:hidden" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2.5">
-          <span className="flex items-center gap-2.5 text-sm font-medium">
+          <button onClick={goToSectionHome} data-testid="header-home" className="flex items-center gap-2.5 text-sm font-medium hover:opacity-80 transition-opacity">
             <img src={logo} alt="" className="w-8 h-8 object-contain" />
             <span>{section.emoji}</span>{section.label}
-          </span>
+          </button>
           <div className="flex items-center gap-3">
             <span className="text-xs text-muted-foreground hidden sm:inline">{user.nombre}</span>
             <button onClick={logout}
