@@ -1,4 +1,4 @@
-import { ClipboardList, Clock, Flame, TrendingUp, ShoppingBag, Ban } from "lucide-react";
+import { ClipboardList, Flame, TrendingUp, ShoppingBag, Ban } from "lucide-react";
 import type { Order } from "../types";
 import { formatCurrency } from "../lib/format";
 import { StatusBadge } from "../components/shared";
@@ -20,10 +20,9 @@ export function AdminDashboard({ orders }: { orders: Order[] }) {
       <p className="font-mono text-xs text-muted-foreground uppercase tracking-widest mb-2">Panel administrativo</p>
       <h1 className="font-display text-4xl font-bold mb-8">Dashboard</h1>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4 mb-8">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
         {[
           { label: "Pedidos hoy",       value: orders.length,                                             Icon: ClipboardList, color: "text-blue-600",   bg: "bg-blue-50 border-blue-200"    },
-          { label: "Pendientes",        value: orders.filter(o => o.status === "Pendiente").length,       Icon: Clock,         color: "text-amber-600",  bg: "bg-amber-50 border-amber-200"  },
           { label: "En preparación",    value: orders.filter(o => o.status === "En preparación").length,  Icon: Flame,         color: "text-orange-600", bg: "bg-orange-50 border-orange-200"},
           { label: "Facturado hoy",     value: formatCurrency(totalRevenue),                              Icon: TrendingUp,    color: "text-green-600",  bg: "bg-green-50 border-green-200"  },
           { label: "Cancelados hoy",    value: orders.filter(o => o.status === "Cancelado").length,       Icon: Ban,           color: "text-red-600",    bg: "bg-red-50 border-red-200"      },
