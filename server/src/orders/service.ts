@@ -215,6 +215,19 @@ export async function updateOrder(id: string, patch: UpdateOrderInput): Promise<
   return toDTO(order);
 }
 
+// Borra un pedido de forma permanente y total — de este pedido no queda rastro en ningún lado
+// del sistema (Reportes, Dashboard, listados de recepción/cocina). Pensado para limpiar pedidos
+// de prueba (reunión del 26/7/2026: antes de que el cliente empiece a operar de verdad, van a
+// cargar pedidos de prueba que no deben ensuciar los reportes reales) — no hay soft-delete ni
+// papelera, es irreversible a propósito, así que el frontend tiene que confirmar antes de llamar
+// a esto (ver ConfirmDialog en AdminReports). OrderItem cae en cascada (ver @relation en
+// schema.prisma), no hace falta borrarlo aparte.
+export async function deleteOrder(id: string): Promise<void> {
+  const existing = await db.order.findUnique({ where: { id } });
+  if (!existing) throw new OrderNotFoundError(id);
+  await db.order.delete({ where: { id } });
+}
+
 // Umbrales del avance automático de estados por horario (reunión del 24/7/2026): en cocina son
 // muy puntuales con el horario que le asignan a cada pedido, así que no hace falta que nadie
 // marque a mano "en preparación"/"listo para retirar"/"entregado" — se infieren del reloj. Solo

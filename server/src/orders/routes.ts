@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../auth/middleware.js";
 import { asyncHandler } from "../lib/asyncHandler.js";
-import { createOrder, getSlotAvailability, listOrders, lookupOrder, updateOrder, BusinessClosedError, OrderNotFoundError } from "./service.js";
+import { createOrder, deleteOrder, getSlotAvailability, listOrders, lookupOrder, updateOrder, BusinessClosedError, OrderNotFoundError } from "./service.js";
 import { InvalidSlotError, SlotFullError } from "./slots.js";
 import type { CreateOrderInput, UpdateOrderInput } from "./types.js";
 
@@ -90,3 +90,19 @@ ordersRouter.patch("/:id", requireAuth, requireRole("recepcionista", "cocina", "
     res.status(500).json({ error: err instanceof Error ? err.message : "Error desconocido al actualizar el pedido" });
   }
 });
+
+// Borra un pedido de forma permanente — pensado para limpiar pedidos de prueba antes de que el
+// cliente empiece a operar de verdad (ver deleteOrder en service.ts). Solo-admin: ni recepción
+// ni cocina pueden borrar pedidos, a diferencia del PATCH de arriba que los tres roles usan.
+ordersRouter.delete("/:id", requireAuth, requireRole("admin"), asyncHandler(async (req, res) => {
+  try {
+    await deleteOrder(req.params.id);
+    res.json({ ok: true });
+  } catch (err) {
+    if (err instanceof OrderNotFoundError) {
+      res.status(404).json({ error: err.message });
+      return;
+    }
+    throw err;
+  }
+}));

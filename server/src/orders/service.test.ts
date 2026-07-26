@@ -3,7 +3,7 @@ import { afterAll, afterEach, beforeEach, describe, expect, it } from "vitest";
 import { resetDb } from "../../tests/helpers/resetDb.js";
 import { db } from "../db.js";
 import { argentinaWallTimeToUtc, businessDayFor } from "./businessDay.js";
-import { OrderNotFoundError, advanceScheduledOrders, createOrder, lookupOrder, updateOrder } from "./service.js";
+import { OrderNotFoundError, advanceScheduledOrders, createOrder, deleteOrder, lookupOrder, updateOrder } from "./service.js";
 import { InvalidSlotError, MIN_LEAD_MINUTES, SLOT_CAPACITY, SlotFullError } from "./slots.js";
 
 // La ventana de retiro ahora es editable por cocina, por día de la semana (ver
@@ -131,6 +131,17 @@ describe.skipIf(!slot)("updateOrder — reprogramación", () => {
     const order = await createOrder({ customer: "Cliente Entrega", phone: "66666000001", items, type: "presencial", estimatedTime: slot! });
     const updated = await updateOrder(order.id, { status: "Entregado" });
     expect(updated.deliveredAt).not.toBeNull();
+  });
+
+  it("borra el pedido de forma permanente, junto con sus ítems (cascada)", async () => {
+    const order = await createOrder({ customer: "Cliente A Borrar", phone: "88888000001", items, type: "presencial", estimatedTime: slot! });
+    await deleteOrder(order.id);
+    expect(await db.order.findUnique({ where: { id: order.id } })).toBeNull();
+    expect(await db.orderItem.findFirst({ where: { orderId: order.id } })).toBeNull();
+  });
+
+  it("tira OrderNotFoundError al borrar un id inexistente", async () => {
+    await expect(deleteOrder(randomUUID())).rejects.toThrow(OrderNotFoundError);
   });
 });
 

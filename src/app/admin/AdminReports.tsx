@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
+import { Trash2 } from "lucide-react";
 import { CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
 import { formatCurrency } from "../lib/format";
-import { api, type MonthlyReport } from "../lib/api";
+import { api, type MonthlyReport, type OrderSummary } from "../lib/api";
 import { useAuth } from "../auth";
+import { ConfirmDialog } from "../components/shared";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "../components/ui/chart";
 
 // Formatea un Date a "YYYY-MM", el formato que usan el input de mes y el backend.
@@ -34,27 +36,51 @@ const COMPARE_CHART_CONFIG: ChartConfig = {
 
 // Hook chico para pedir el reporte de un mes y quedarse con el resultado (o null mientras carga
 // o si falla) — lo usan tanto la comparación (dos meses a la vez) como el detalle (uno solo).
-function useMonthlyReport(month: string): MonthlyReport | null {
+// Devuelve también un `refetch` para forzar un refresco sin cambiar de mes — lo usa el detalle
+// después de borrar un pedido, para que la tabla y los totales queden al día.
+function useMonthlyReport(month: string): [MonthlyReport | null, () => void] {
   const { token } = useAuth();
   const [report, setReport] = useState<MonthlyReport | null>(null);
+  const [refreshSignal, setRefreshSignal] = useState(0);
   useEffect(() => {
     if (!token) return;
     setReport(null);
     api.reportsMonthly(token, month).then(setReport).catch(() => setReport(null));
-  }, [token, month]);
-  return report;
+    // refreshSignal a propósito en las deps: es el único trigger de un refetch manual, no cambia
+    // "month" ni "token" para no reiniciar el selector de mes del usuario.
+  }, [token, month, refreshSignal]);
+  return [report, () => setRefreshSignal(s => s + 1)];
 }
 
 // Pantalla de reportes: gráfico de línea comparando dos meses día por día, más el detalle
 // completo (ventas, top productos y cada pedido entregado) de un mes elegido aparte.
 export function AdminReports() {
+  const { token } = useAuth();
   const [monthA, setMonthA] = useState(thisMonth);
   const [monthB, setMonthB] = useState(lastMonth);
-  const reportA = useMonthlyReport(monthA);
-  const reportB = useMonthlyReport(monthB);
+  const [reportA] = useMonthlyReport(monthA);
+  const [reportB] = useMonthlyReport(monthB);
 
   const [detailMonth, setDetailMonth] = useState(thisMonth);
-  const detailReport = useMonthlyReport(detailMonth);
+  const [detailReport, refreshDetailReport] = useMonthlyReport(detailMonth);
+
+  // Borrado de un pedido de prueba desde la tabla de detalle — irreversible, por eso pasa
+  // primero por ConfirmDialog (ver el JSX más abajo) en vez de borrar directo al click.
+  const [deleteTarget, setDeleteTarget] = useState<OrderSummary | null>(null);
+  const [deleting, setDeleting] = useState(false);
+  const handleDelete = async () => {
+    if (!deleteTarget || !token) return;
+    setDeleting(true);
+    try {
+      await api.ordersDelete(token, deleteTarget.id);
+      setDeleteTarget(null);
+      refreshDetailReport();
+    } catch (e) {
+      window.alert(e instanceof Error ? e.message : "Error al eliminar el pedido");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   // Une las series diarias de ambos meses en un solo array por día (1..máximo de días entre los
   // dos meses), para que recharts dibuje las dos líneas sobre el mismo eje X.
@@ -154,6 +180,7 @@ export function AdminReports() {
                     <th className="px-4 py-2.5">Fecha</th>
                     <th className="px-4 py-2.5">Ítems</th>
                     <th className="px-4 py-2.5">Total</th>
+                    <th className="px-4 py-2.5">Acciones</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -164,6 +191,13 @@ export function AdminReports() {
                       <td className="px-4 py-2.5 text-muted-foreground font-mono text-xs">{formatOrderDate(o.createdAt)}</td>
                       <td className="px-4 py-2.5 text-muted-foreground">{o.itemCount}</td>
                       <td className="px-4 py-2.5 font-mono font-semibold">{formatCurrency(o.total)}</td>
+                      <td className="px-4 py-2.5">
+                        <button onClick={() => setDeleteTarget(o)} data-testid={`delete-order-${o.id}`}
+                          title="Eliminar pedido de prueba"
+                          className="flex items-center gap-1 text-xs text-destructive border border-red-200 bg-red-50 hover:bg-red-100 px-2.5 py-1 rounded-lg transition-colors font-medium whitespace-nowrap">
+                          <Trash2 size={12} /> Eliminar
+                        </button>
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -175,6 +209,16 @@ export function AdminReports() {
           </>
         )}
       </section>
+
+      {deleteTarget && (
+        <ConfirmDialog
+          title="¿Seguro eliminar?"
+          description={`Se va a borrar el pedido #${deleteTarget.orderNumber} (${deleteTarget.customer}) de forma permanente, de todo el sistema. Esta acción no se puede deshacer.`}
+          confirmLabel={deleting ? "Eliminando…" : "Sí, eliminar"}
+          onCancel={() => setDeleteTarget(null)}
+          onConfirm={handleDelete}
+        />
+      )}
     </div>
   );
 }

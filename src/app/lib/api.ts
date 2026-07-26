@@ -161,6 +161,10 @@ export const api = {
   // nunca por orderNumber, que puede repetirse entre jornadas comerciales distintas.
   ordersUpdate: (token: string, id: string, patch: UpdateOrderInput) =>
     request<Order>(`/api/orders/${id}`, { method: "PATCH", token, body: JSON.stringify(patch) }),
+  // Borra un pedido de forma permanente (solo-admin) — pensado para limpiar pedidos de prueba
+  // desde Reportes, ver AdminReports.tsx. Irreversible: el llamador tiene que confirmar antes.
+  ordersDelete: (token: string, id: string) =>
+    request<{ ok: boolean }>(`/api/orders/${id}`, { method: "DELETE", token }),
 
   // ── Reportes (solo-admin) ────────────────────────────────────────────────
   // Trae el reporte mensual: total facturado, cantidad de pedidos y productos más vendidos.
