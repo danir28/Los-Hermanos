@@ -11,8 +11,8 @@ export const ordersRouter = Router();
 // la usan tanto el cliente (checkout) como recepción (alta manual presencial/telefónica).
 ordersRouter.post("/", asyncHandler(async (req, res) => {
   const body = req.body as Partial<CreateOrderInput>;
-  if (!body.customer || !body.phone || !body.type || !Array.isArray(body.items) || body.items.length === 0) {
-    res.status(400).json({ error: 'Faltan datos del pedido ("customer", "phone", "type", "items")' });
+  if (!body.customer || !body.phone || !body.type || !body.estimatedTime || !Array.isArray(body.items) || body.items.length === 0) {
+    res.status(400).json({ error: 'Faltan datos del pedido ("customer", "phone", "type", "estimatedTime", "items")' });
     return;
   }
   try {

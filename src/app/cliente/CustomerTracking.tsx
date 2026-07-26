@@ -36,7 +36,7 @@ export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
     }
   };
 
-  const statuses: OrderStatus[] = ["Pendiente", "Programado", "En preparación", "Listo para retirar", "Entregado"];
+  const statuses: OrderStatus[] = ["Programado", "En preparación", "Listo para retirar", "Entregado"];
 
   const SearchForm = (
     <div className="max-w-lg mx-auto px-6 py-12">

@@ -6,9 +6,10 @@ import { formatCurrency } from "../lib/format";
 import { ConfirmDialog, SlotPicker } from "../components/shared";
 
 // Datos del pedido que arma este formulario, para que AppStaff.tsx lo cree en el estado
-// compartido de orders. estimatedTime queda tipado string | null por compatibilidad con
-// AppStaff.tsx/api.ts, pero handleConfirm ya no permite llamar a onConfirm sin horario.
-type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string | null };
+// compartido de orders. estimatedTime es obligatorio (todo pedido nace "Programado" con un
+// horario, ya no existe el fallback "Pendiente") — handleConfirm no deja llamar a onConfirm
+// sin horario elegido.
+type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string };
 
 // Formulario de carga manual de pedidos por parte de recepción o cocina (pedidos telefónicos o
 // presenciales) — 100% agnóstico de rol, solo recibe onConfirm, por eso lo reusa también cocina.

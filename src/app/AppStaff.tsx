@@ -149,14 +149,14 @@ function AppStaffContent() {
   // Pedido cargado manualmente por recepción o cocina (presencial o telefónico) — la usan ambos
   // roles, por eso la vista a la que vuelve al terminar depende de cuál esté logueado
   // (cocina no tiene una vista "dashboard" como recepción y admin).
-  const createManualOrder = async (input: { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string | null }) => {
+  const createManualOrder = async (input: { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string }) => {
     try {
       const newOrder = await api.ordersCreate({
         customer: input.customer,
         phone: input.phone,
         items: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
         type: input.type,
-        ...(input.estimatedTime ? { estimatedTime: input.estimatedTime } : {}),
+        estimatedTime: input.estimatedTime,
       });
       setOrders(prev => [newOrder, ...prev]);
       setPrintOrder(newOrder);

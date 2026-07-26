@@ -1,8 +1,10 @@
 // Ítem del carrito de compras del cliente (producto + cantidad elegida).
 export type CartItem = { id: number; name: string; price: number; qty: number; image: string };
 
-// Estados posibles del ciclo de vida de un pedido.
-export type OrderStatus = "Pendiente" | "Programado" | "En preparación" | "Listo para retirar" | "Entregado" | "Cancelado";
+// Estados posibles del ciclo de vida de un pedido. Ya no incluye "Pendiente": todo pedido nace
+// "Programado" con un horario de retiro elegido (decisión del 26/7/2026 — ver
+// server/src/orders/service.ts#createOrder).
+export type OrderStatus = "Programado" | "En preparación" | "Listo para retirar" | "Entregado" | "Cancelado";
 
 // Canal por el que se originó un pedido.
 export type OrderType = "online" | "presencial" | "telefónico" | "whatsapp";

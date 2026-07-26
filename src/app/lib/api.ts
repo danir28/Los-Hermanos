@@ -47,7 +47,7 @@ export type CreateOrderInput = {
   phone: string;
   items: { name: string; qty: number; price: number }[];
   type: OrderType;
-  estimatedTime?: string;
+  estimatedTime: string;
 };
 export type UpdateOrderInput = { status?: OrderStatus; estimatedTime?: string };
 

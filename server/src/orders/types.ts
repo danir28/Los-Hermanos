@@ -2,15 +2,16 @@
 export type OrderItemInput = { name: string; qty: number; price: number };
 
 // Datos necesarios para crear un pedido nuevo (cliente, recepción, cocina). estimatedTime es el
-// turno de retiro elegido en el momento de crear el pedido (ver orders/slots.ts) — opcional: si
-// todos los turnos visibles están llenos, recepción/cocina puede cargar el pedido igual sin
-// horario (nace "Pendiente", como antes de este cambio) y reprogramarlo después.
+// turno de retiro elegido en el momento de crear el pedido (ver orders/slots.ts) — obligatorio:
+// todo pedido nace "Programado" con un horario real. Ya no existe un status "Pendiente" para
+// cargar un pedido sin horario (decisión del 26/7/2026: ese camino ya era inalcanzable desde la
+// UI, que siempre exige elegir un turno antes de confirmar — ver CustomerCart/ReceptionistCreateOrder).
 export type CreateOrderInput = {
   customer: string;
   phone: string;
   items: OrderItemInput[];
   type: string;
-  estimatedTime?: string;
+  estimatedTime: string;
 };
 
 // Cambios posibles sobre un pedido existente: avanzar/cancelar estado, o asignarle horario.

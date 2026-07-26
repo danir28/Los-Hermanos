@@ -15,7 +15,6 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
   const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
   const tabs: { key: string; label: string }[] = [
     { key: "Todos",                label: "Todos"                },
-    { key: "Pendiente",            label: "Pendiente"            },
     { key: "Programado",           label: "Programado"           },
     { key: "En preparación",       label: "En preparación"       },
     { key: "Listo para retirar",   label: "Listo para retirar"   },

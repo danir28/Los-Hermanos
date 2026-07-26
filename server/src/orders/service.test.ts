@@ -4,7 +4,7 @@ import { resetDb } from "../../tests/helpers/resetDb.js";
 import { db } from "../db.js";
 import { argentinaWallTimeToUtc, businessDayFor } from "./businessDay.js";
 import { OrderNotFoundError, advanceScheduledOrders, createOrder, lookupOrder, updateOrder } from "./service.js";
-import { MIN_LEAD_MINUTES, SLOT_CAPACITY, SlotFullError } from "./slots.js";
+import { InvalidSlotError, MIN_LEAD_MINUTES, SLOT_CAPACITY, SlotFullError } from "./slots.js";
 
 // La ventana de retiro ahora es editable por cocina, por día de la semana (ver
 // server/src/slotWindows/) — ya no son constantes que se puedan importar de slots.ts. Estos
@@ -77,12 +77,15 @@ describe.skipIf(!slot)("createOrder — capacidad de turnos (requiere Postgres r
   });
 });
 
-describe("createOrder — numeración", () => {
+describe.skipIf(!slot)("createOrder — numeración", () => {
   it("asigna orderNumbers consecutivos y sin duplicados bajo creación concurrente", async () => {
-    const attempts = 6;
+    // Como máximo SLOT_CAPACITY intentos al mismo turno — más que eso chocaría con SlotFullError
+    // (ya cubierto por el describe "capacidad de turnos" de arriba), y este test es sobre
+    // numeración, no sobre cupo.
+    const attempts = SLOT_CAPACITY;
     const results = await Promise.all(
       Array.from({ length: attempts }, (_, i) =>
-        createOrder({ customer: `Cliente Numeración ${i}`, phone: `2222200000${i}`, items, type: "presencial" })
+        createOrder({ customer: `Cliente Numeración ${i}`, phone: `2222200000${i}`, items, type: "presencial", estimatedTime: slot! })
       )
     );
     const numbers = results.map(o => Number(o.orderNumber)).sort((a, b) => a - b);
@@ -91,11 +94,13 @@ describe("createOrder — numeración", () => {
   });
 });
 
-describe("createOrder — fallback sin horario", () => {
-  it('nace "Pendiente" sin estimatedTime si no se elige turno', async () => {
-    const order = await createOrder({ customer: "Cliente Sin Horario", phone: "33333000001", items, type: "telefónico" });
-    expect(order.status).toBe("Pendiente");
-    expect(order.estimatedTime).toBeNull();
+describe("createOrder — requiere horario de retiro", () => {
+  it('rechaza crear un pedido sin estimatedTime (ya no existe el fallback "Pendiente")', async () => {
+    // @ts-expect-error — estimatedTime es obligatorio en el tipo; esto simula un caller que no
+    // respeta el contrato (orders/routes.ts ya lo filtra antes con un 400, esto prueba la
+    // garantía de la propia capa de servicio).
+    await expect(createOrder({ customer: "Cliente Sin Horario", phone: "33333000001", items, type: "telefónico" }))
+      .rejects.toThrow(InvalidSlotError);
   });
 });
 
@@ -123,15 +128,15 @@ describe.skipIf(!slot)("updateOrder — reprogramación", () => {
   });
 
   it('registra deliveredAt al pasar a "Entregado"', async () => {
-    const order = await createOrder({ customer: "Cliente Entrega", phone: "66666000001", items, type: "presencial" });
+    const order = await createOrder({ customer: "Cliente Entrega", phone: "66666000001", items, type: "presencial", estimatedTime: slot! });
     const updated = await updateOrder(order.id, { status: "Entregado" });
     expect(updated.deliveredAt).not.toBeNull();
   });
 });
 
-describe("lookupOrder", () => {
+describe.skipIf(!slot)("lookupOrder", () => {
   it("no cruza el mismo orderNumber entre jornadas comerciales distintas", async () => {
-    const order = await createOrder({ customer: "Cliente Lookup", phone: "77777000001", items, type: "presencial" });
+    const order = await createOrder({ customer: "Cliente Lookup", phone: "77777000001", items, type: "presencial", estimatedTime: slot! });
     // Mueve el pedido a la jornada de ayer sin tocar el orderNumber — misma constraint
     // compuesta { businessDate, orderNumber } que usa lookupOrder.
     const yesterday = new Date(businessDayFor(new Date()).getTime() - 24 * 60 * 60 * 1000);
@@ -141,7 +146,7 @@ describe("lookupOrder", () => {
   });
 
   it("busca por teléfono normalizando separadores", async () => {
-    await createOrder({ customer: "Cliente Teléfono", phone: "11-2345-6789", items, type: "presencial" });
+    await createOrder({ customer: "Cliente Teléfono", phone: "11-2345-6789", items, type: "presencial", estimatedTime: slot! });
     const found = await lookupOrder({ phone: "1123456789" });
     expect(found?.phone).toBe("11-2345-6789");
   });

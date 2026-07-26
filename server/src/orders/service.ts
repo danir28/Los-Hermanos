@@ -60,14 +60,14 @@ function toDTO(order: OrderWithItems): OrderDTO {
   };
 }
 
-// Crea un pedido nuevo (online, presencial, telefónico). Si viene un turno de retiro elegido
-// (input.estimatedTime, ver orders/slots.ts), nace directamente "Programado" con ese horario;
-// si no, nace "Pendiente" sin horario como antes (fallback para cuando todos los turnos
-// visibles están llenos y igual hay que cargar el pedido). El total se calcula a partir de los
-// ítems recibidos. El número visible se asigna con un upsert atómico sobre OrderCounter
-// (increment) — ese mismo upsert sirve de punto de serialización para el chequeo de cupo del
-// turno: al quedar dentro de la misma transacción, el row-lock que toma protege ambas cosas, sin
-// necesidad de un lock aparte.
+// Crea un pedido nuevo (online, presencial, telefónico), siempre con un turno de retiro elegido
+// (input.estimatedTime, ver orders/slots.ts) — nace directamente "Programado" con ese horario.
+// Ya no existe un fallback "sin horario" (ver CreateOrderInput): esa vía ya era inalcanzable
+// desde toda la UI actual, que exige elegir un turno antes de dejar confirmar. El total se
+// calcula a partir de los ítems recibidos. El número visible se asigna con un upsert atómico
+// sobre OrderCounter (increment) — ese mismo upsert sirve de punto de serialización para el
+// chequeo de cupo del turno: al quedar dentro de la misma transacción, el row-lock que toma
+// protege ambas cosas, sin necesidad de un lock aparte.
 export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
   if (input.type === "online" && !(await isBusinessOpenNow())) {
     throw new BusinessClosedError();
@@ -75,10 +75,9 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
 
   const total = input.items.reduce((s, i) => s + i.price * i.qty, 0);
   const businessDate = businessDayFor(new Date());
-  // Solo hace falta resolver las franjas de retiro si vino un horario elegido — es una simple
-  // lectura, no necesita entrar a la transacción que sí tiene que serializarse (ver comentario
-  // de arriba sobre el lock de OrderCounter).
-  const slotRanges = input.estimatedTime ? await getSlotWindowFor(businessDate) : null;
+  // Lectura simple, no necesita entrar a la transacción que sí tiene que serializarse (ver
+  // comentario de arriba sobre el lock de OrderCounter).
+  const slotRanges = await getSlotWindowFor(businessDate);
 
   const order = await db.$transaction(async (tx) => {
     const counter = await tx.orderCounter.upsert({
@@ -87,17 +86,11 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
       update: { lastNumber: { increment: 1 } },
     });
 
-    let status = "Pendiente";
-    let estimatedTime: string | null = null;
-    if (input.estimatedTime) {
-      assertValidSlotOrThrow(input.estimatedTime, slotRanges!, businessDate);
-      const taken = await tx.order.count({
-        where: { businessDate, estimatedTime: input.estimatedTime, status: { not: "Cancelado" } },
-      });
-      if (taken >= SLOT_CAPACITY) throw new SlotFullError(input.estimatedTime);
-      status = "Programado";
-      estimatedTime = input.estimatedTime;
-    }
+    assertValidSlotOrThrow(input.estimatedTime, slotRanges, businessDate);
+    const taken = await tx.order.count({
+      where: { businessDate, estimatedTime: input.estimatedTime, status: { not: "Cancelado" } },
+    });
+    if (taken >= SLOT_CAPACITY) throw new SlotFullError(input.estimatedTime);
 
     return tx.order.create({
       data: {
@@ -106,8 +99,8 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
         customer: input.customer,
         phone: input.phone,
         type: input.type,
-        status,
-        estimatedTime,
+        status: "Programado",
+        estimatedTime: input.estimatedTime,
         total,
         items: { create: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })) },
       },
