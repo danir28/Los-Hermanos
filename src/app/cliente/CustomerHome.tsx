@@ -2,6 +2,7 @@ import { Fragment } from "react";
 import { ShoppingCart, Clock, Phone, Flame } from "lucide-react";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
+import { BUSINESS_PHONE_DISPLAY, BUSINESS_PHONE_TEL } from "../lib/contact";
 import type { BusinessHours, DaySchedule } from "../lib/api";
 import logo from "../../assets/logo.png";
 
@@ -78,7 +79,7 @@ export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: st
             </Fragment>
           ))}
           <div className="hidden md:block w-px h-4 bg-white/25" />
-          <div className="flex items-center gap-2"><Phone size={14} /><span className="font-semibold">4521-8800</span></div>
+          <a href={`tel:${BUSINESS_PHONE_TEL}`} className="flex items-center gap-2 hover:underline"><Phone size={14} /><span className="font-semibold">{BUSINESS_PHONE_DISPLAY}</span></a>
           {businessHours && (
             <span className={`text-xs font-semibold px-2.5 py-1 rounded-full ${businessHours.isOpenNow ? "bg-white/20" : "bg-black/25"}`}>
               {businessHours.isOpenNow ? "Abierto ahora" : "Cerrado ahora"}

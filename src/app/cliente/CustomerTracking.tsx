@@ -5,6 +5,7 @@ import { STATUS } from "../data/statusConfig";
 import { StatusBadge, TypePill } from "../components/shared";
 import { STATUS_MESSAGES } from "./statusMessages";
 import { api } from "../lib/api";
+import { BUSINESS_PHONE_DISPLAY, BUSINESS_PHONE_TEL } from "../lib/contact";
 import { formatTimeLabel } from "../lib/time";
 
 // Pantalla de seguimiento de pedido: buscar por número o teléfono y ver la línea de tiempo del estado.
@@ -174,7 +175,12 @@ export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
         <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-center">
           <Ban size={32} className="text-red-400 mx-auto mb-3" />
           <p className="font-semibold text-red-800 mb-1">Pedido cancelado</p>
-          <p className="text-sm text-red-700">Si tenés alguna consulta, llamanos al <span className="font-mono font-bold">4521-8800</span></p>
+          <p className="text-sm text-red-700">
+            Si tenés alguna consulta, llamanos al{" "}
+            <a href={`tel:${BUSINESS_PHONE_TEL}`} className="font-mono font-bold underline hover:text-red-900">
+              {BUSINESS_PHONE_DISPLAY}
+            </a>
+          </p>
         </div>
       )}
     </div>

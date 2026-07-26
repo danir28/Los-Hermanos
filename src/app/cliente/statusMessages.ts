@@ -6,5 +6,5 @@ export const STATUS_MESSAGES: Record<OrderStatus, string> = {
   "En preparación":     "¡Tu pedido está siendo preparado ahora mismo! En breve estará listo.",
   "Listo para retirar": "¡Tu pedido está listo! Podés pasar a retirarlo cuando quieras.",
   "Entregado":          "El pedido fue entregado correctamente. ¡Gracias por elegirnos!",
-  "Cancelado":          "Este pedido fue cancelado. Si tenés alguna consulta, llamanos al 4521-8800.",
+  "Cancelado":          "Este pedido fue cancelado.",
 };
