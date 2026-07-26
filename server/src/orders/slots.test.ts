@@ -3,36 +3,66 @@ import { businessDayFor } from "./businessDay.js";
 import {
   InvalidSlotError,
   SLOT_CAPACITY,
-  SLOT_RANGE_END,
-  SLOT_RANGE_START,
   assertValidSlotOrThrow,
   generateSlots,
   isSlotInRange,
   isSlotTooSoon,
 } from "./slots.js";
 
+// Franjas de ejemplo para las funciones puras de este archivo — desde que la ventana real pasó
+// a ser editable por cocina, con franjas múltiples (ver server/src/slotWindows/), estas
+// funciones ya no leen un rango hardcodeado, lo reciben como parámetro. Estos tests solo
+// verifican el comportamiento genérico (inclusión de extremos, alineación al paso, horario
+// partido, etc.), no un valor de producción puntual — la validación de que cada franja caiga
+// dentro del horario de atención del local vive en slotWindows/service.ts, no acá.
+const RANGES = [{ startTime: "19:00", endTime: "22:55" }];
+const SPLIT_RANGES = [{ startTime: "12:00", endTime: "14:00" }, { startTime: "19:30", endTime: "22:30" }];
+
 describe("generateSlots", () => {
-  it(`genera exactamente 48 turnos, de ${SLOT_RANGE_START} a ${SLOT_RANGE_END} cada 5 minutos`, () => {
-    const slots = generateSlots();
+  it(`genera exactamente 48 turnos, de ${RANGES[0].startTime} a ${RANGES[0].endTime} cada 5 minutos`, () => {
+    const slots = generateSlots(RANGES);
     expect(slots).toHaveLength(48);
-    expect(slots[0]).toBe(SLOT_RANGE_START);
-    expect(slots.at(-1)).toBe(SLOT_RANGE_END);
+    expect(slots[0]).toBe(RANGES[0].startTime);
+    expect(slots.at(-1)).toBe(RANGES[0].endTime);
+  });
+
+  it("genera la cantidad correcta de turnos para una franja distinta", () => {
+    const slots = generateSlots([{ startTime: "10:00", endTime: "10:20" }]);
+    expect(slots).toEqual(["10:00", "10:05", "10:10", "10:15", "10:20"]);
+  });
+
+  it("con horario partido, junta los turnos de todas las franjas en orden cronológico", () => {
+    const slots = generateSlots(SPLIT_RANGES);
+    expect(slots[0]).toBe("12:00");
+    expect(slots.at(-1)).toBe("22:30");
+    expect(slots).not.toContain("14:05"); // el hueco entre franjas no genera turnos
+    expect(slots).not.toContain("19:25");
+  });
+
+  it("sin ninguna franja configurada, no hay turnos", () => {
+    expect(generateSlots([])).toEqual([]);
   });
 });
 
 describe("isSlotInRange", () => {
   it("acepta los dos extremos del rango, inclusive", () => {
-    expect(isSlotInRange(SLOT_RANGE_START)).toBe(true);
-    expect(isSlotInRange(SLOT_RANGE_END)).toBe(true);
+    expect(isSlotInRange(RANGES[0].startTime, RANGES)).toBe(true);
+    expect(isSlotInRange(RANGES[0].endTime, RANGES)).toBe(true);
   });
 
   it("rechaza un horario fuera de rango", () => {
-    expect(isSlotInRange("18:55")).toBe(false);
-    expect(isSlotInRange("23:00")).toBe(false);
+    expect(isSlotInRange("18:55", RANGES)).toBe(false);
+    expect(isSlotInRange("23:00", RANGES)).toBe(false);
   });
 
   it("rechaza un horario en rango pero no alineado al paso de 5 minutos", () => {
-    expect(isSlotInRange("19:03")).toBe(false);
+    expect(isSlotInRange("19:03", RANGES)).toBe(false);
+  });
+
+  it("con horario partido, acepta un turno de cualquiera de las franjas y rechaza el hueco entre ambas", () => {
+    expect(isSlotInRange("12:30", SPLIT_RANGES)).toBe(true);
+    expect(isSlotInRange("20:00", SPLIT_RANGES)).toBe(true);
+    expect(isSlotInRange("15:00", SPLIT_RANGES)).toBe(false);
   });
 });
 
@@ -61,21 +91,21 @@ describe("assertValidSlotOrThrow", () => {
   const now = new Date("2026-07-18T12:00:00.000Z"); // bien temprano, cualquier turno da tiempo de sobra
 
   it("no tira nada con un turno válido", () => {
-    expect(() => assertValidSlotOrThrow("19:00", businessDate, now)).not.toThrow();
+    expect(() => assertValidSlotOrThrow("19:00", RANGES, businessDate, now)).not.toThrow();
   });
 
   it("valida el formato antes que el rango", () => {
-    expect(() => assertValidSlotOrThrow("9:00", businessDate, now)).toThrow(InvalidSlotError);
-    expect(() => assertValidSlotOrThrow("9:00", businessDate, now)).toThrow(/formato/);
+    expect(() => assertValidSlotOrThrow("9:00", RANGES, businessDate, now)).toThrow(InvalidSlotError);
+    expect(() => assertValidSlotOrThrow("9:00", RANGES, businessDate, now)).toThrow(/formato/);
   });
 
   it("valida el rango antes que la anticipación", () => {
-    expect(() => assertValidSlotOrThrow("23:00", businessDate, now)).toThrow(/entre/);
+    expect(() => assertValidSlotOrThrow("23:00", RANGES, businessDate, now)).toThrow(/franjas/);
   });
 
   it("valida la anticipación mínima al final, con un turno en rango y bien formado", () => {
     const nowJustBefore = new Date("2026-07-18T22:00:01.000Z"); // 1s después de las 19:00 ART
-    expect(() => assertValidSlotOrThrow("19:20", businessDate, nowJustBefore)).toThrow(/anticipación/);
+    expect(() => assertValidSlotOrThrow("19:20", RANGES, businessDate, nowJustBefore)).toThrow(/anticipación/);
   });
 });
 

@@ -9,6 +9,7 @@ import { whatsappRouter } from "./integrations/whatsapp/routes.js";
 import { ordersRouter } from "./orders/routes.js";
 import { productsRouter } from "./products/routes.js";
 import { reportsRouter } from "./reports/routes.js";
+import { slotWindowsRouter } from "./slotWindows/routes.js";
 
 // App de Express sin efectos secundarios (sin .listen(), sin setInterval, sin signal
 // handlers) — separado de index.ts para poder importarlo en tests con supertest sin
@@ -29,6 +30,7 @@ app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/products", productsRouter);
 app.use("/api/reports", reportsRouter);
+app.use("/api/slot-windows", slotWindowsRouter);
 
 // Middleware de error global: atrapa lo que asyncHandler reenvía con next(err) para que
 // un error de un handler async devuelva 500 en vez de dejar el request colgado.

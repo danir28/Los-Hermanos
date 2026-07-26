@@ -121,6 +121,29 @@ model BusinessHours {
   @@map("business_hours")
 }
 
+// Ventana de retiro PROGRAMABLE de un día de la semana (0=domingo..6=sábado, mismo criterio que
+// BusinessHours) — no confundir con BusinessHours, que es el horario de ATENCIÓN del local.
+// Define entre qué horas la grilla de turnos (ver orders/slots.ts) ofrece horarios de retiro ese
+// día puntual. `ranges` es un array JSON de `{ startTime, endTime }` (mismo formato que
+// BusinessHours.ranges) para soportar franjas múltiples calcadas de un horario partido del local
+// (ej. una franja de mediodía y otra de noche); a diferencia de BusinessHours, ninguna franja acá
+// puede cruzar la medianoche (startTime siempre es anterior a endTime dentro del mismo día — es
+// una ventana de turnos dentro de una misma jornada comercial, no un horario de apertura). Cada
+// franja tiene que caer dentro de alguna franja de BusinessHours de ese mismo día — se valida en
+// slotWindows/service.ts al guardar, no hay forma de guardar un horario de retiro que el local
+// tenga cerrado. La gestiona cocina (PUT /api/slot-windows, solo-cocina — ni admin ni recepción,
+// ver la sección de admin en AppStaff.tsx sobre por qué cada rol ve únicamente su propia
+// sección), no admin. El paso entre turnos (SLOT_STEP_MINUTES) y el cupo por turno
+// (SLOT_CAPACITY) siguen fijos como constantes en orders/slots.ts — no se pidió que fueran
+// editables.
+model SlotWindow {
+  dayOfWeek Int      @id
+  ranges    Json
+  updatedAt DateTime @updatedAt
+
+  @@map("slot_windows")
+}
+
 // Catálogo real del local (reemplaza el array hardcodeado que vivía en
 // src/app/data/products.ts) — ver server/src/products/. id queda como Int autoincrement, no
 // uuid, a propósito: el frontend ya maneja Product.id/CartItem.id como number en todo el árbol

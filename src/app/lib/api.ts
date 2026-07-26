@@ -83,6 +83,17 @@ export type TimeRange = { openTime: string; closeTime: string };
 export type DaySchedule = { dayOfWeek: number; isOpen: boolean; ranges: TimeRange[] };
 export type BusinessHours = { days: DaySchedule[]; isOpenNow: boolean };
 
+// Una franja de retiro en formato "HH:mm". A diferencia de TimeRange (BusinessHours), nunca
+// cruza la medianoche: startTime siempre es anterior a endTime.
+export type SlotTimeRange = { startTime: string; endTime: string };
+// Ventana de retiro PROGRAMABLE de un día de la semana — no confundir con DaySchedule/BusinessHours
+// (horario de ATENCIÓN del local). `ranges` define entre qué horas la grilla de turnos
+// (SlotPicker) ofrece horarios de retiro ese día; soporta franjas múltiples calcadas de un
+// horario partido del local (cada una tiene que caer dentro de alguna franja de BusinessHours
+// de ese mismo día, validado en el backend).
+export type SlotWindowDay = { dayOfWeek: number; ranges: SlotTimeRange[] };
+export type SlotWindows = { days: SlotWindowDay[] };
+
 // Datos para crear/editar un producto del catálogo (ver server/src/products/types.ts).
 export type CreateProductInput = {
   name: string;
@@ -161,6 +172,13 @@ export const api = {
   // Solo-admin: reemplaza el horario de la semana completa.
   businessHoursUpdate: (token: string, days: DaySchedule[]) =>
     request<BusinessHours>("/api/business-hours", { method: "PUT", token, body: JSON.stringify({ days }) }),
+
+  // ── Grilla de turnos de retiro (solo-cocina) ────────────────────────────
+  // A diferencia de businessHours, ni el GET es público: el cliente solo ve el resultado ya
+  // aplicado a través de ordersSlots, no la configuración cruda.
+  slotWindowsGet: (token: string) => request<SlotWindows>("/api/slot-windows", { token }),
+  slotWindowsUpdate: (token: string, days: SlotWindowDay[]) =>
+    request<SlotWindows>("/api/slot-windows", { method: "PUT", token, body: JSON.stringify({ days }) }),
 
   // ── Catálogo de productos ────────────────────────────────────────────────
   // Pública: la usa la app de cliente (menú, carta QR de mostrador) y la carga manual de

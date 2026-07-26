@@ -1,6 +1,7 @@
 import { isBusinessOpenNow } from "../businessHours/service.js";
 import { db } from "../db.js";
 import type { Order, OrderItem } from "../generated/prisma/client.js";
+import { getSlotWindowFor } from "../slotWindows/service.js";
 import { argentinaWallTimeToUtc, businessDayFor } from "./businessDay.js";
 import { assertValidSlotOrThrow, generateSlots, isSlotTooSoon, parseTime, SLOT_CAPACITY, SlotFullError } from "./slots.js";
 import type { CreateOrderInput, OrderDTO, UpdateOrderInput } from "./types.js";
@@ -74,6 +75,10 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
 
   const total = input.items.reduce((s, i) => s + i.price * i.qty, 0);
   const businessDate = businessDayFor(new Date());
+  // Solo hace falta resolver las franjas de retiro si vino un horario elegido — es una simple
+  // lectura, no necesita entrar a la transacción que sí tiene que serializarse (ver comentario
+  // de arriba sobre el lock de OrderCounter).
+  const slotRanges = input.estimatedTime ? await getSlotWindowFor(businessDate) : null;
 
   const order = await db.$transaction(async (tx) => {
     const counter = await tx.orderCounter.upsert({
@@ -85,7 +90,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
     let status = "Pendiente";
     let estimatedTime: string | null = null;
     if (input.estimatedTime) {
-      assertValidSlotOrThrow(input.estimatedTime, businessDate);
+      assertValidSlotOrThrow(input.estimatedTime, slotRanges!, businessDate);
       const taken = await tx.order.count({
         where: { businessDate, estimatedTime: input.estimatedTime, status: { not: "Cancelado" } },
       });
@@ -118,6 +123,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
 // no dejar elegir un turno lleno o sin margen desde la UI, aunque el backend igual lo vuelve a
 // validar en createOrder/updateOrder por las dudas.
 export async function getSlotAvailability(businessDate: Date = businessDayFor(new Date())) {
+  const slotRanges = await getSlotWindowFor(businessDate);
   const counts = await db.order.groupBy({
     by: ["estimatedTime"],
     where: { businessDate, estimatedTime: { not: null }, status: { not: "Cancelado" } },
@@ -125,7 +131,7 @@ export async function getSlotAvailability(businessDate: Date = businessDayFor(ne
   });
   const takenBySlot = new Map(counts.map(c => [c.estimatedTime, c._count]));
 
-  return generateSlots().map(time => {
+  return generateSlots(slotRanges).map(time => {
     const taken = takenBySlot.get(time) ?? 0;
     const tooSoon = isSlotTooSoon(time, businessDate);
     return { time, taken, capacity: SLOT_CAPACITY, tooSoon, available: taken < SLOT_CAPACITY && !tooSoon };
@@ -190,8 +196,9 @@ export async function updateOrder(id: string, patch: UpdateOrderInput): Promise<
   // contra sí mismo). Se usa la jornada comercial del pedido original (existing.businessDate),
   // no la de "ahora" — es lo correcto para reprogramar same-day, que es el caso real hoy.
   if (patch.estimatedTime !== undefined) {
+    const slotRanges = await getSlotWindowFor(existing.businessDate);
     const order = await db.$transaction(async (tx) => {
-      assertValidSlotOrThrow(patch.estimatedTime!, existing.businessDate);
+      assertValidSlotOrThrow(patch.estimatedTime!, slotRanges, existing.businessDate);
       const taken = await tx.order.count({
         where: {
           businessDate: existing.businessDate,

@@ -4,7 +4,16 @@ import { resetDb } from "../../tests/helpers/resetDb.js";
 import { db } from "../db.js";
 import { argentinaWallTimeToUtc, businessDayFor } from "./businessDay.js";
 import { OrderNotFoundError, advanceScheduledOrders, createOrder, lookupOrder, updateOrder } from "./service.js";
-import { MIN_LEAD_MINUTES, SLOT_CAPACITY, SLOT_RANGE_END, SLOT_RANGE_START, SlotFullError } from "./slots.js";
+import { MIN_LEAD_MINUTES, SLOT_CAPACITY, SlotFullError } from "./slots.js";
+
+// La ventana de retiro ahora es editable por cocina, por día de la semana (ver
+// server/src/slotWindows/) — ya no son constantes que se puedan importar de slots.ts. Estos
+// valores reflejan lo que siembra la migración de esa tabla (20260726173034_add_slot_windows,
+// 19:00 a 22:55 los 7 días) y con lo que arranca la base de test. No se consultan por DB acá a
+// propósito: `slot` (más abajo) se calcula a nivel de módulo para poder usarse en
+// `describe.skipIf`, que necesita el valor de forma síncrona antes de que corra ningún hook.
+const TEST_SLOT_WINDOW_START = "19:00";
+const TEST_SLOT_WINDOW_END = "22:55";
 
 // createOrder/updateOrder validan el turno contra el reloj real (businessDayFor(new Date()),
 // sin "now" inyectable) — así que estos tests calculan un turno realmente elegible AHORA, en vez
@@ -16,8 +25,8 @@ function usableSlotForToday(bufferMinutes = MIN_LEAD_MINUTES + 10): string | nul
   const target = new Date(Date.now() + bufferMinutes * 60_000 + ARGENTINA_OFFSET_MS);
   let minutes = Math.ceil((target.getUTCHours() * 60 + target.getUTCMinutes()) / 5) * 5;
 
-  const [startH, startM] = SLOT_RANGE_START.split(":").map(Number);
-  const [endH, endM] = SLOT_RANGE_END.split(":").map(Number);
+  const [startH, startM] = TEST_SLOT_WINDOW_START.split(":").map(Number);
+  const [endH, endM] = TEST_SLOT_WINDOW_END.split(":").map(Number);
   const startMinutes = startH * 60 + startM;
   const endMinutes = endH * 60 + endM;
 

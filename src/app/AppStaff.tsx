@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import {
   Clock, LayoutDashboard, ClipboardList, PlusCircle,
-  ChefHat, BarChart3, FileBarChart, LogOut, UtensilsCrossed,
+  ChefHat, BarChart3, FileBarChart, LogOut, UtensilsCrossed, CalendarClock,
 } from "lucide-react";
 import type { CartItem, Order, OrderStatus, OrderType } from "./types";
 import { api, type UserRole } from "./lib/api";
 import { AuthProvider, LoginScreen, useAuth } from "./auth";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
-import { KitchenPanel, KitchenAssign } from "./cocina";
+import { KitchenPanel, KitchenAssign, KitchenSlotWindows } from "./cocina";
 import { AdminBusinessHours, AdminDashboard, AdminProducts, AdminReports } from "./admin";
 import { OrderTicket, RoleNavTabs, type NavTab } from "./components/shared";
 import logo from "../assets/logo.png";
@@ -38,6 +38,7 @@ const KITCHEN_TABS: NavTab[] = [
   { key: "panel",        label: "Panel",        Icon: ChefHat         },
   { key: "create",       label: "Nuevo Pedido", Icon: PlusCircle      },
   { key: "reprogramar",  label: "Reprogramar",  Icon: Clock           },
+  { key: "horarios",     label: "Horarios",     Icon: CalendarClock   },
 ];
 
 // Sin "Integraciones": ni FUDO ni el bot de WhatsApp hacen falta para este sistema (reunión con
@@ -230,6 +231,7 @@ function AppStaffContent() {
           {staffView === "panel"       && <KitchenPanel orders={orders} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("reprogramar"); }} onPrint={setPrintOrder} />}
           {staffView === "create"      && <ReceptionistCreateOrder onConfirm={createManualOrder} />}
           {staffView === "reprogramar" && <KitchenAssign orders={orders} onAssigned={assignTime} preselectedId={preselectedAssignId} />}
+          {staffView === "horarios"    && <KitchenSlotWindows />}
         </>
       )}
 

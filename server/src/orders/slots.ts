@@ -1,4 +1,5 @@
 import { argentinaWallTimeToUtc } from "./businessDay.js";
+import type { SlotTimeRange } from "../slotWindows/types.js";
 
 // Se llegó a esto en la reunión del 23/7/2026 con el cliente: antes, cocina le asignaba el
 // horario de retiro al cliente DESPUÉS de creado el pedido (ver KitchenAssign, ahora
@@ -6,14 +7,14 @@ import { argentinaWallTimeToUtc } from "./businessDay.js";
 // al momento de crear el pedido, de una grilla de turnos con cupo limitado, para que nunca se
 // prometa un horario que cocina no puede cumplir.
 //
-// El rango va hardcodeado acá (no derivado de BusinessHours) a propósito: BusinessHours es el
-// horario de ATENCIÓN del local (cruza medianoche, ~19:00 a 02:00), mientras que esta es la
-// ventana de RETIRO PROGRAMABLE, más angosta y con otro propósito. Si el cliente pide en el
-// futuro que este rango sea editable, es la misma extensión que ya tiene BusinessHours (tabla +
-// pantalla admin) — no se hace ahora porque no fue pedido.
+// Las franjas en sí ya NO son una constante fija acá: desde la reunión del 26/7/2026, cocina las
+// edita por día de la semana, con franjas múltiples (ver server/src/slotWindows/, tabla
+// SlotWindow) — las funciones de abajo las reciben como parámetro `ranges` en vez de leerlas de
+// un valor hardcodeado. Cada franja de retiro tiene que caer dentro del horario de atención del
+// local (BusinessHours) — esa validación vive en slotWindows/service.ts, al guardar, no acá:
+// estas funciones confían en que `ranges` ya es válido. El paso entre turnos y el cupo por turno
+// SÍ siguen fijos como constantes (no fueron pedidos como editables).
 export const SLOT_STEP_MINUTES = 5;
-export const SLOT_RANGE_START = "19:00";
-export const SLOT_RANGE_END = "22:55"; // último turno reservable: garantiza que el retiro más tardío sea a las 23:00
 export const SLOT_CAPACITY = 4;
 // Margen mínimo entre "ahora" y el turno elegible, para darle tiempo a cocina de prepararlo
 // (pedido del 24/7/2026: a las 19:00, el primer turno elegible tiene que ser 19:20, no 19:00 ni
@@ -54,27 +55,35 @@ export function isSlotFormatValid(slot: string): boolean {
   return TIME_FORMAT.test(slot);
 }
 
-// Dentro de [SLOT_RANGE_START, SLOT_RANGE_END] y alineado al paso de 5 minutos — no alcanza con
-// estar en rango, "19:03" no es un turno válido aunque esté entre las dos puntas.
-export function isSlotInRange(slot: string): boolean {
+// Dentro de alguna de las franjas dadas y alineado al paso de 5 minutos — no alcanza con estar
+// en rango, "19:03" no es un turno válido aunque esté entre las puntas de una franja.
+export function isSlotInRange(slot: string, ranges: SlotTimeRange[]): boolean {
   if (!isSlotFormatValid(slot)) return false;
   const value = toMinutesSinceMidnight(slot);
-  const start = toMinutesSinceMidnight(SLOT_RANGE_START);
-  const end = toMinutesSinceMidnight(SLOT_RANGE_END);
-  return value >= start && value <= end && (value - start) % SLOT_STEP_MINUTES === 0;
+  return ranges.some(range => {
+    const start = toMinutesSinceMidnight(range.startTime);
+    const end = toMinutesSinceMidnight(range.endTime);
+    return value >= start && value <= end && (value - start) % SLOT_STEP_MINUTES === 0;
+  });
 }
 
-// Lista completa de turnos válidos del rango, ej. ["19:00", "19:05", ..., "22:55"].
-export function generateSlots(): string[] {
-  const start = toMinutesSinceMidnight(SLOT_RANGE_START);
-  const end = toMinutesSinceMidnight(SLOT_RANGE_END);
+// Lista completa de turnos válidos de todas las franjas dadas, ej. ["19:00", ..., "22:55"] o,
+// con horario partido, ["12:00", ..., "14:00", "19:30", ..., "22:30"]. Se ordena
+// cronológicamente al final independientemente del orden en que vengan las franjas — las
+// franjas ya vienen validadas sin superponerse (ver assertNoOverlaps en slotWindows/service.ts),
+// así que ordenar por string alcanza (mismo largo "HH:mm" en todas).
+export function generateSlots(ranges: SlotTimeRange[]): string[] {
   const slots: string[] = [];
-  for (let m = start; m <= end; m += SLOT_STEP_MINUTES) {
-    const hours = Math.floor(m / 60);
-    const minutes = m % 60;
-    slots.push(`${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`);
+  for (const range of ranges) {
+    const start = toMinutesSinceMidnight(range.startTime);
+    const end = toMinutesSinceMidnight(range.endTime);
+    for (let m = start; m <= end; m += SLOT_STEP_MINUTES) {
+      const hours = Math.floor(m / 60);
+      const minutes = m % 60;
+      slots.push(`${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`);
+    }
   }
-  return slots;
+  return slots.sort();
 }
 
 // Compara el turno (hora de pared en Argentina, dentro de la jornada comercial dada) contra el
@@ -92,8 +101,11 @@ export function isSlotTooSoon(slot: string, businessDate: Date, now: Date = new 
 // Valida formato + rango + que dé el margen de preparación; tira InvalidSlotError con el motivo
 // puntual. Usada por createOrder/updateOrder antes de chequear cupo — no tiene sentido contar
 // ocupación de un turno que ni siquiera es válido.
-export function assertValidSlotOrThrow(slot: string, businessDate: Date, now: Date = new Date()): void {
+export function assertValidSlotOrThrow(slot: string, ranges: SlotTimeRange[], businessDate: Date, now: Date = new Date()): void {
   if (!isSlotFormatValid(slot)) throw new InvalidSlotError('debe tener formato "HH:mm"');
-  if (!isSlotInRange(slot)) throw new InvalidSlotError(`debe estar entre ${SLOT_RANGE_START} y ${SLOT_RANGE_END}, en pasos de ${SLOT_STEP_MINUTES} minutos`);
+  if (!isSlotInRange(slot, ranges)) {
+    const rangesText = ranges.length > 0 ? ranges.map(r => `${r.startTime} a ${r.endTime}`).join(", ") : "ninguna franja configurada";
+    throw new InvalidSlotError(`debe estar dentro de alguna de estas franjas (${rangesText}), en pasos de ${SLOT_STEP_MINUTES} minutos`);
+  }
   if (isSlotTooSoon(slot, businessDate, now)) throw new InvalidSlotError(`no da tiempo a prepararlo — hace falta elegir un horario con al menos ${MIN_LEAD_MINUTES} minutos de anticipación`);
 }
