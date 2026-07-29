@@ -31,7 +31,7 @@ como trabajo de producción — no como ejercicio de práctica.
   estándar (VAPID) más un beep sintetizado con Web Audio API, porque ningún navegador soporta un
   sonido personalizado dentro de una notificación del sistema operativo.
 - **Backend separado** (`server/`, Express + Prisma + Postgres) solo para lo que no es seguro hacer
-  desde el navegador: JWT, claves de integraciones externas (FUDO, WhatsApp) y webhooks entrantes.
+  desde el navegador: JWT y claves de integraciones externas (FUDO).
 
 ## Stack
 
