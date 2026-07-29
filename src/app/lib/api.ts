@@ -126,15 +126,6 @@ export const api = {
   fudoStatus: (token: string) => request<IntegrationStatus>("/api/fudo/status", { token }),
   // Dispara una sincronización manual del catálogo de FUDO contra el backend.
   fudoSync: (token: string) => request<FudoSyncResult>("/api/fudo/sync", { method: "POST", token }),
-  // Consulta si la integración con el agente de WhatsApp está configurada.
-  whatsappStatus: (token: string) => request<IntegrationStatus>("/api/whatsapp/status", { token }),
-  // Envía un mensaje de WhatsApp a un número puntual a través del agente.
-  whatsappNotify: (token: string, to: string, message: string) =>
-    request<{ sent: boolean }>("/api/whatsapp/notify", {
-      method: "POST",
-      token,
-      body: JSON.stringify({ to, message }),
-    }),
 
   // ── Pedidos ──────────────────────────────────────────────────────────────
   // Pública: la usan tanto el cliente (checkout) como recepción (alta manual).

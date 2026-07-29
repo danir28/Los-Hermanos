@@ -42,10 +42,11 @@ const KITCHEN_TABS: NavTab[] = [
   { key: "horarios",     label: "Horarios",     Icon: CalendarClock   },
 ];
 
-// Sin "Integraciones": ni FUDO ni el bot de WhatsApp hacen falta para este sistema (reunión con
-// el cliente del 24/7/2026 — ver memoria de proyecto). El backend de ambas integraciones queda
-// intacto por si se retoma en un proyecto futuro y separado, pero no tiene sentido mostrárselo
-// al cliente acá.
+// Sin "Integraciones": FUDO no hace falta para este sistema (reunión con el cliente del
+// 24/7/2026 — ver memoria de proyecto). Su backend queda intacto por si se retoma en un
+// proyecto futuro y separado, pero no tiene sentido mostrárselo al cliente acá. El bot de
+// WhatsApp directamente se sacó del proyecto (29/7/2026): el cliente resuelve la derivación
+// a la web con la respuesta automática nativa de WhatsApp Business, sin backend de por medio.
 const ADMIN_TABS: NavTab[] = [
   { key: "dashboard",     label: "Dashboard",    Icon: BarChart3        },
   { key: "reportes",      label: "Reportes",     Icon: FileBarChart     },

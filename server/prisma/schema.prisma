@@ -21,32 +21,6 @@ model FudoProduct {
   @@map("fudo_products")
 }
 
-// Eventos entrantes que el agente de WhatsApp envía a POST /api/whatsapp/webhook.
-// Se guardan tal cual llegan (sin procesar todavía) para no perder pedidos
-// si falla la comunicación con el agente (ver Riesgo 7 del documento de alcance).
-model WhatsappInboundEvent {
-  id         String   @id @default(uuid())
-  type       String
-  from       String
-  payload    Json
-  receivedAt DateTime @default(now())
-
-  @@map("whatsapp_inbound_events")
-}
-
-// Registro de los mensajes que este sistema le pidió al agente que envíe
-// (POST /api/whatsapp/notify), para poder auditar qué se le avisó a cada cliente.
-model WhatsappOutboundMessage {
-  id      String   @id @default(uuid())
-  to      String
-  message String
-  success Boolean
-  error   String?
-  sentAt  DateTime @default(now())
-
-  @@map("whatsapp_outbound_messages")
-}
-
 // Pedido de un cliente: quién lo hizo, por qué canal (type), su estado actual y el
 // horario estimado que le asignó cocina. id (uuid) es el identificador real, usado para
 // buscar/actualizar un pedido puntual (ver orders/service.ts#updateOrder). orderNumber es
