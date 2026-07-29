@@ -1,64 +1,75 @@
-# Rotisería Los Hermanos App
+# Rotisería Los Hermanos — Sistema de gestión
 
-This is a code bundle for Rotisería Los Hermanos App. The original project is available at https://www.figma.com/design/OKcg2iq0XUofYOrkAgIlv9/Rotiser%C3%ADa-Los-Hermanos-App.
+Sistema de gestión para una rotisería real: pedidos para retirar, con roles separados para
+cliente, recepción, cocina y administración. Primer proyecto de cliente real, pensado y construido
+como trabajo de producción — no como ejercicio de práctica.
 
-The app is split into two separate frontends that share the same `src/` tree (see `CLAUDE.md` for the full architecture):
+## Qué resuelve
 
-- **Cliente** — public, no login: catalog, cart, checkout, order tracking.
-- **Staff** — recepción / cocina / admin, behind a login.
+- **Cliente** (público, sin login): carta digital, carrito, checkout, seguimiento del pedido por
+  número.
+- **Recepción**: alta manual de pedidos (mostrador/teléfono), listado y dashboard del día.
+- **Cocina**: panel de pedidos en curso, asignación/reprogramación de horarios de retiro, aviso
+  sonoro y notificación push cuando entra un pedido nuevo.
+- **Administración**: reportes mensuales, gestión de horarios comerciales y catálogo de productos.
 
-## Running the code
+## Decisiones de diseño que vale la pena mirar
 
-Run `npm i` to install the dependencies (shared by both apps).
+- **Dos builds de frontend separados** (`cliente` / `staff`), con entradas Vite distintas
+  (`vite.cliente.config.ts` / `vite.staff.config.ts`) que nunca importan código de la otra app
+  transitivamente — el bundle de cliente no puede terminar incluyendo código de staff por
+  accidente, verificado en cada build.
+- **Numeración de pedidos por jornada comercial**: la rotisería cierra después de medianoche, así
+  que el número de pedido resetea a las 7am (no a las 00:00) — `businessDayFor()` calcula a qué
+  jornada comercial pertenece cada pedido, en offset fijo de Argentina, sin depender de la zona
+  horaria del servidor.
+- **Autenticación JWT por rol** (`recepcionista` / `cocina` / `admin`), con cada cuenta viendo
+  únicamente su sección — una decisión explícita del negocio: una cuenta de administrador
+  administra, no supervisa recepción/cocina desde el mismo login.
+- **Notificaciones Web Push multiplataforma**: cocina puede operar desde una tablet Android con la
+  pantalla apagada, un PC con Windows o una Mac con Safari — el aviso de pedido nuevo usa Web Push
+  estándar (VAPID) más un beep sintetizado con Web Audio API, porque ningún navegador soporta un
+  sonido personalizado dentro de una notificación del sistema operativo.
+- **Backend separado** (`server/`, Express + Prisma + Postgres) solo para lo que no es seguro hacer
+  desde el navegador: JWT, claves de integraciones externas (FUDO, WhatsApp) y webhooks entrantes.
 
-- `npm run dev` — cliente dev server, http://localhost:5173
-- `npm run dev:staff` — staff dev server, http://localhost:5174 (needs a seeded user to log in — see below)
-- `npm run build` / `npm run build:staff` — production builds (`dist/` / `dist-staff/`)
-- `npm run typecheck` — type-checks both apps
-- `npm run lint:css` — stylelint over `src/**/*.css`
+## Stack
 
-The backend (below) must also be running for either app to load orders/catalog data or for staff to log in.
+React 18 + TypeScript + Vite + Tailwind v4 (frontend) · Express + TypeScript + Prisma + PostgreSQL
+(backend) · Vitest + Testing Library + Supertest (tests unitarios/integración) · Playwright (e2e).
 
-## Backend / integraciones (FUDO, WhatsApp)
+## Correr el proyecto localmente
 
-Hay un backend separado en `server/` que maneja la autenticación del staff y las integraciones con FUDO y con el agente de WhatsApp (Twilio), respaldado por una base PostgreSQL.
-
-### Base de datos (una sola vez)
-
-Necesitás Postgres corriendo localmente y un rol/base dedicados para la
-app (no uses el superusuario `postgres` directo). Con pgAdmin (o `psql`),
-conectado como `postgres`, corré estas dos sentencias **una por vez**
-(`CREATE DATABASE` no puede ir junto con otra sentencia):
-
-```sql
-CREATE ROLE los_hermanos_app WITH LOGIN PASSWORD 'ELEGI_UNA_CONTRASEÑA';
 ```
-```sql
-CREATE DATABASE los_hermanos OWNER los_hermanos_app;
-```
-```sql
-ALTER ROLE los_hermanos_app CREATEDB;
+npm i
+npm run dev          # cliente — http://localhost:5173
+npm run dev:staff    # staff  — http://localhost:5174 (necesita un usuario sembrado, ver abajo)
 ```
 
-(El último permiso lo necesita Prisma Migrate para crear una base
-temporal de comparación al generar migraciones.)
-
-### Levantar el backend
+Backend (necesario para que cualquiera de las dos apps cargue pedidos/catálogo, o para loguearse
+en staff):
 
 ```
 cd server
-cp .env.example .env
-# completar DATABASE_URL con la contraseña elegida arriba, JWT_SECRET (ej. con
-# `openssl rand -hex 32`) y las credenciales de FUDO/WhatsApp cuando estén disponibles
+cp .env.example .env   # completar DATABASE_URL, JWT_SECRET (ej. openssl rand -hex 32)
 npm i
-npm run db:migrate    # crea las tablas
-npm run db:generate   # regenera el Prisma Client — no asumir que db:migrate ya lo hizo
-npm run db:seed       # da de alta el primer usuario de staff, con SEED_ADMIN_* del .env
-npm run dev
+npm run db:migrate     # crea las tablas
+npm run db:generate    # regenera el Prisma Client
+npm run db:seed        # da de alta el primer usuario de staff (SEED_ADMIN_* del .env)
+npm run dev             # http://localhost:4000
 ```
 
-Sin el paso de `db:seed` no hay ninguna cuenta para loguearse en la app de staff (no hay pantalla de alta de usuarios todavía). Volver a correr `db:seed` con otros valores de `SEED_ADMIN_*` para dar de alta más cuentas (recepcionista, cocina, otro admin).
+Sin `db:seed` no hay ninguna cuenta para entrar a la app de staff (todavía no hay pantalla de alta
+de usuarios — se agregan por env vars).
 
-Con el backend corriendo en `http://localhost:4000`, el cliente en
-`http://localhost:5173` y el staff en `http://localhost:5174`, la pestaña
-**Administración → Integraciones** muestra el estado de cada conexión (FUDO/WhatsApp).
+Otros comandos útiles: `npm run build` / `build:staff` (builds de producción), `npm run typecheck`,
+`npm run lint:css`, `npm test` (raíz y `server/`), `npm run test:e2e` (Playwright).
+
+## Estado
+
+Postgres real (no datos de prueba en memoria), autenticación funcionando, cuatro roles operativos.
+En desarrollo activo junto con el cliente real de la rotisería.
+
+---
+
+Desarrollado por [Daniel Rodríguez](https://github.com/danir28).
