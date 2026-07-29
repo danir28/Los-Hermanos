@@ -25,6 +25,11 @@ export default function AppCliente() {
   }
 
   const [customerView, setCustomerView] = useState("home");
+  // Categoría con la que abre CustomerMenu al navegar a "menu" — la fijan las tarjetas de
+  // categoría destacada de CustomerHome (ver goToView). "Todos" por defecto: sin esto, entrar al
+  // menú por cualquier otro camino (nav superior, "Ver todo el menú") quedaría con la categoría
+  // pegada de un click anterior en una tarjeta, en vez de mostrar el catálogo completo.
+  const [menuCategory, setMenuCategory] = useState("Todos");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [confirmedOrder, setConfirmedOrder] = useState<Order | null>(null);
   const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
@@ -36,6 +41,14 @@ export default function AppCliente() {
   const refreshBusinessHours = () => { api.businessHoursGet().then(setBusinessHours).catch(() => {}); };
   useEffect(refreshBusinessHours, []);
   useEffect(() => { if (customerView === "cart") refreshBusinessHours(); }, [customerView]);
+
+  // Único punto de entrada para cambiar de vista — reemplaza los setCustomerView(...) sueltos de
+  // más abajo para que fijar/resetear menuCategory quede en un solo lugar en vez de repetido en
+  // cada callback que navega a "menu".
+  const goToView = (view: string, category = "Todos") => {
+    if (view === "menu") setMenuCategory(category);
+    setCustomerView(view);
+  };
 
   // Agrega un producto al carrito: si ya estaba, suma 1 a la cantidad existente en vez de duplicar la línea.
   const addToCart = (product: Product) => setCart(prev => {
@@ -66,7 +79,7 @@ export default function AppCliente() {
       });
       setConfirmedOrder(newOrder);
       setCart([]);
-      setCustomerView("confirmation");
+      goToView("confirmation");
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Error al crear el pedido");
     }
@@ -78,7 +91,7 @@ export default function AppCliente() {
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
-          <button onClick={() => setCustomerView("home")} data-testid="header-home" className="flex items-center gap-2.5 px-2 hover:opacity-80 transition-opacity">
+          <button onClick={() => goToView("home")} data-testid="header-home" className="flex items-center gap-2.5 px-2 hover:opacity-80 transition-opacity">
             <img src={logo} alt="" className="w-9 h-9 object-contain" />
             <p className="font-brand text-xl leading-none text-primary">Los Hermanos</p>
           </button>
@@ -100,13 +113,13 @@ export default function AppCliente() {
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between">
           <div className="flex">
             {[{ k: "home", l: "Inicio" }, { k: "menu", l: "Menú" }, { k: "tracking", l: "Seguir pedido" }].map(v => (
-              <button key={v.k} onClick={() => setCustomerView(v.k)} data-testid={`nav-${v.k}`}
+              <button key={v.k} onClick={() => goToView(v.k)} data-testid={`nav-${v.k}`}
                 className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${customerView === v.k ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}>
                 {v.l}
               </button>
             ))}
           </div>
-          <button onClick={() => setCustomerView("cart")} data-testid="nav-cart" className="relative flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors py-3">
+          <button onClick={() => goToView("cart")} data-testid="nav-cart" className="relative flex items-center gap-1.5 text-sm font-medium text-foreground hover:text-primary transition-colors py-3">
             <ShoppingCart size={17} /> Carrito
             {cartCount > 0 && (
               <span className="absolute -top-0 -right-4 w-5 h-5 bg-primary text-primary-foreground text-[10px] rounded-full flex items-center justify-center font-mono font-bold">
@@ -117,10 +130,10 @@ export default function AppCliente() {
         </div>
       </nav>
 
-      {customerView === "home"         && <CustomerHome onNavigate={setCustomerView} businessHours={businessHours} />}
-      {customerView === "menu"         && <CustomerMenu cart={cart} onAddToCart={addToCart} onNavigate={setCustomerView} />}
+      {customerView === "home"         && <CustomerHome onNavigate={goToView} businessHours={businessHours} />}
+      {customerView === "menu"         && <CustomerMenu cart={cart} onAddToCart={addToCart} onNavigate={goToView} initialCategory={menuCategory} />}
       {customerView === "cart"         && <CustomerCart cart={cart} onUpdateCart={updateCart} onConfirm={confirmOrder} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
-      {customerView === "confirmation" && confirmedOrder && <CustomerConfirmation order={confirmedOrder} onTrack={() => setCustomerView("tracking")} />}
+      {customerView === "confirmation" && confirmedOrder && <CustomerConfirmation order={confirmedOrder} onTrack={() => goToView("tracking")} />}
       {customerView === "tracking"     && <CustomerTracking preloadOrder={confirmedOrder ?? undefined} />}
     </div>
   );

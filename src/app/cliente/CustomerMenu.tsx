@@ -5,9 +5,12 @@ import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 
 // Pantalla de menú del cliente: filtro por categoría, búsqueda y agregado de productos al carrito.
-export function CustomerMenu({ cart, onAddToCart, onNavigate }: { cart: CartItem[]; onAddToCart: (p: Product) => void; onNavigate: (v: string) => void }) {
+// initialCategory (default "Todos") deja que quien navega hasta acá — hoy, las tarjetas de
+// categoría destacada de CustomerHome — abra el menú ya filtrado, en vez de arrancar siempre en
+// el catálogo completo.
+export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = "Todos" }: { cart: CartItem[]; onAddToCart: (p: Product) => void; onNavigate: (v: string) => void; initialCategory?: string }) {
   const { products, categories } = useProducts();
-  const [category, setCategory] = useState("Todos");
+  const [category, setCategory] = useState(initialCategory);
   const [search, setSearch] = useState("");
 
   const filtered = products.filter(p => {

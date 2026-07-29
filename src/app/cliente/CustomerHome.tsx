@@ -41,7 +41,7 @@ function groupSchedule(days: DaySchedule[]): { label: string; text: string }[] {
 }
 
 // Pantalla de inicio del cliente: hero con horarios, categorías rápidas y productos destacados del día.
-export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: string) => void; businessHours: BusinessHours | null }) {
+export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: string, category?: string) => void; businessHours: BusinessHours | null }) {
   const { products } = useProducts();
   const featured = products.filter(p => p.featured && p.active && !p.outOfStock);
   const scheduleGroups = businessHours ? groupSchedule(businessHours.days) : [];
@@ -94,15 +94,18 @@ export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: st
           <h2 className="font-display text-4xl font-bold">¿Qué te provoca hoy?</h2>
         </div>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-16">
+          {/* category acá tiene que ser exactamente uno de los valores de CATEGORIES
+              (src/app/data/products.ts) — es lo que se le pasa a onNavigate para que CustomerMenu
+              abra ya filtrado (ver initialCategory en CustomerMenu.tsx). */}
           {[
-            { name: "Pollo a la Brasa", emoji: "🍗", desc: "El clásico de la casa" },
-            { name: "Milanesas",        emoji: "🥩", desc: "Caseras y jugosas"     },
-            { name: "Empanadas",        emoji: "🫓", desc: "Horneadas al momento"  },
-            { name: "Guarniciones",     emoji: "🥗", desc: "Siempre frescas"       },
+            { category: "Tablas calientes",  emoji: "🍽️", desc: "Picadas para compartir" },
+            { category: "Pizzas",            emoji: "🍕", desc: "Recién horneadas"        },
+            { category: "Milanesa al plato", emoji: "🍖", desc: "Con papas fritas"        },
+            { category: "Empanadas",         emoji: "🫓", desc: "Horneadas al momento"    },
           ].map(cat => (
-            <button key={cat.name} onClick={() => onNavigate("menu")} className="group bg-card border border-border rounded-2xl p-6 text-center hover:border-primary/50 hover:shadow-lg transition-all duration-200">
+            <button key={cat.category} onClick={() => onNavigate("menu", cat.category)} className="group bg-card border border-border rounded-2xl p-6 text-center hover:border-primary/50 hover:shadow-lg transition-all duration-200">
               <div className="text-5xl mb-4 group-hover:scale-110 transition-transform duration-200">{cat.emoji}</div>
-              <div className="font-semibold text-foreground group-hover:text-primary transition-colors text-sm">{cat.name}</div>
+              <div className="font-semibold text-foreground group-hover:text-primary transition-colors text-sm">{cat.category}</div>
               <div className="text-xs text-muted-foreground mt-1">{cat.desc}</div>
             </button>
           ))}
