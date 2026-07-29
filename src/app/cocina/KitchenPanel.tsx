@@ -4,6 +4,7 @@ import { formatCurrency } from "../lib/format";
 import { StatusBadge, TypePill } from "../components/shared";
 import { formatTimeLabel, nowLabel } from "../lib/time";
 import { AgeIndicator } from "./AgeIndicator";
+import { NotificationSetup } from "./NotificationSetup";
 
 // Panel principal de cocina: TODOS los pedidos de la jornada comercial actual, ordenados por
 // horario de retiro (los que no tienen horario todavía van primero, marcados para que alguien
@@ -17,7 +18,7 @@ import { AgeIndicator } from "./AgeIndicator";
 // imprimen su comanda automáticamente al crearse (ver createManualOrder en AppStaff.tsx) —
 // un pedido online nunca pasa por esa pantalla, así que es el único caso donde cocina necesita
 // disparar la impresión ella misma, al verlo entrar acá.
-export function KitchenPanel({ orders, onGoAssign, onPrint }: { orders: Order[]; onGoAssign: (id: string) => void; onPrint: (order: Order) => void }) {
+export function KitchenPanel({ orders, token, onGoAssign, onPrint }: { orders: Order[]; token: string; onGoAssign: (id: string) => void; onPrint: (order: Order) => void }) {
   // Sin horario primero (necesitan atención humana), después ascendente por horario de retiro
   // — si a las 19:20 hay un pedido y a las 19:30 otro, el de 19:20 aparece arriba.
   const sorted = [...orders].sort((a, b) => {
@@ -40,6 +41,8 @@ export function KitchenPanel({ orders, onGoAssign, onPrint }: { orders: Order[];
           </p>
         </div>
       </div>
+
+      <NotificationSetup token={token} />
 
       {sorted.length === 0 && (
         <div className="text-center py-16 text-muted-foreground">

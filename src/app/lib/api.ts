@@ -70,6 +70,10 @@ export type MonthlyReport = {
 };
 export type LookupOrderInput = { orderNumber: string } | { phone: string };
 
+// Suscripción Web Push tal como la devuelve PushSubscription#toJSON() en el navegador (ver
+// src/app/lib/push.ts) — mismo shape que espera server/src/push/types.ts#PushSubscriptionPayload.
+export type PushSubscriptionInput = { endpoint: string; keys: { p256dh: string; auth: string } };
+
 export type UserRole = "recepcionista" | "cocina" | "admin";
 export type UserProfile = { id: string; usuario: string; rol: UserRole; nombre: string; email: string; activo: boolean };
 export type LoginResult = { token: string; user: UserProfile };
@@ -165,6 +169,14 @@ export const api = {
   // desde Reportes, ver AdminReports.tsx. Irreversible: el llamador tiene que confirmar antes.
   ordersDelete: (token: string, id: string) =>
     request<{ ok: boolean }>(`/api/orders/${id}`, { method: "DELETE", token }),
+
+  // ── Notificaciones push (solo-cocina) ───────────────────────────────────
+  // Guarda la suscripción push del dispositivo (ver src/app/lib/push.ts#subscribeToKitchenPush).
+  pushSubscribe: (token: string, subscription: PushSubscriptionInput) =>
+    request<{ ok: boolean }>("/api/push/subscribe", { method: "POST", token, body: JSON.stringify(subscription) }),
+  // Da de baja una suscripción puntual, identificada por su endpoint.
+  pushUnsubscribe: (token: string, endpoint: string) =>
+    request<{ ok: boolean }>("/api/push/unsubscribe", { method: "POST", token, body: JSON.stringify({ endpoint }) }),
 
   // ── Reportes (solo-admin) ────────────────────────────────────────────────
   // Trae el reporte mensual: total facturado, cantidad de pedidos y productos más vendidos.

@@ -29,6 +29,11 @@ export const config = {
     agentApiKey: process.env.WHATSAPP_AGENT_API_KEY || "",
     webhookSecret: process.env.WHATSAPP_WEBHOOK_SECRET || "",
   },
+  push: {
+    vapidPublicKey: process.env.VAPID_PUBLIC_KEY || "",
+    vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || "",
+    vapidSubject: process.env.VAPID_SUBJECT || "",
+  },
 };
 
 // Indica si hay credenciales de FUDO cargadas (URL y API key) para habilitar la integración.
@@ -36,3 +41,6 @@ export const isFudoConfigured = () => Boolean(config.fudo.apiUrl && config.fudo.
 
 // Indica si hay una URL del agente de WhatsApp cargada para habilitar la integración.
 export const isWhatsappConfigured = () => Boolean(config.whatsapp.agentUrl);
+
+// Indica si hay claves VAPID cargadas para poder enviar notificaciones push (ver server/src/push/).
+export const isPushConfigured = () => Boolean(config.push.vapidPublicKey && config.push.vapidPrivateKey);

@@ -240,7 +240,7 @@ function AppStaffContent() {
       {user.rol === "cocina" && (
         <>
           <RoleNavTabs tabs={KITCHEN_TABS} active={staffView} onSelect={setStaffView} />
-          {staffView === "panel"       && <KitchenPanel orders={orders} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("reprogramar"); }} onPrint={setPrintOrder} />}
+          {staffView === "panel"       && <KitchenPanel orders={orders} token={token} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("reprogramar"); }} onPrint={setPrintOrder} />}
           {staffView === "create"      && <ReceptionistCreateOrder onConfirm={createManualOrder} />}
           {staffView === "reprogramar" && <KitchenAssign orders={orders} onAssigned={assignTime} preselectedId={preselectedAssignId} />}
           {staffView === "horarios"    && <KitchenSlotWindows />}

@@ -185,5 +185,25 @@ model User {
   activo       Boolean  @default(true)
   createdAt    DateTime @default(now())
 
+  pushSubscriptions PushSubscription[]
+
   @@map("users")
+}
+
+// Suscripción push (Web Push API) de un dispositivo/navegador de un usuario de staff — hoy solo
+// la usa cocina, para el aviso de "pedido nuevo" (ver server/src/push/service.ts#notifyKitchenNewOrder).
+// endpoint es único por dispositivo/navegador: un upsert por endpoint (ver saveSubscription) evita
+// duplicar la fila si el mismo dispositivo vuelve a suscribirse, y reasigna el dueño si una tablet
+// compartida pasa a otro usuario logueado. onDelete: Cascade en userId porque una suscripción sin
+// dueño no tiene sentido — si se borra el usuario, se borran sus suscripciones con él.
+model PushSubscription {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+
+  @@map("push_subscriptions")
 }

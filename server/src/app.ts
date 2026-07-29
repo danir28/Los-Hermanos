@@ -8,6 +8,7 @@ import { fudoRouter } from "./integrations/fudo/routes.js";
 import { whatsappRouter } from "./integrations/whatsapp/routes.js";
 import { ordersRouter } from "./orders/routes.js";
 import { productsRouter } from "./products/routes.js";
+import { pushRouter } from "./push/routes.js";
 import { reportsRouter } from "./reports/routes.js";
 import { slotWindowsRouter } from "./slotWindows/routes.js";
 
@@ -29,6 +30,7 @@ app.use("/api/fudo", fudoRouter);
 app.use("/api/whatsapp", whatsappRouter);
 app.use("/api/orders", ordersRouter);
 app.use("/api/products", productsRouter);
+app.use("/api/push", pushRouter);
 app.use("/api/reports", reportsRouter);
 app.use("/api/slot-windows", slotWindowsRouter);
 

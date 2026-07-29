@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { requireAuth, requireRole } from "../auth/middleware.js";
 import { asyncHandler } from "../lib/asyncHandler.js";
+import { notifyKitchenNewOrder } from "../push/service.js";
 import { createOrder, deleteOrder, getSlotAvailability, listOrders, lookupOrder, updateOrder, BusinessClosedError, OrderNotFoundError } from "./service.js";
 import { InvalidSlotError, SlotFullError } from "./slots.js";
 import type { CreateOrderInput, UpdateOrderInput } from "./types.js";
@@ -17,6 +18,9 @@ ordersRouter.post("/", asyncHandler(async (req, res) => {
   }
   try {
     const order = await createOrder(body as CreateOrderInput);
+    // Fire-and-forget: un fallo al avisarle a cocina (VAPID sin configurar, suscripción
+    // vencida, etc.) nunca debe impedir que el pedido se haya creado ya con éxito.
+    notifyKitchenNewOrder(order).catch(err => console.error("No se pudo notificar a cocina:", err));
     res.json(order);
   } catch (err) {
     if (err instanceof BusinessClosedError || err instanceof SlotFullError) {
