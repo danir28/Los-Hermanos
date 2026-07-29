@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   Clock, LayoutDashboard, ClipboardList, PlusCircle,
   ChefHat, BarChart3, FileBarChart, LogOut, UtensilsCrossed, CalendarClock,
@@ -10,6 +10,7 @@ import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } fr
 import { KitchenPanel, KitchenAssign, KitchenSlotWindows } from "./cocina";
 import { AdminBusinessHours, AdminDashboard, AdminProducts, AdminReports } from "./admin";
 import { OrderTicket, RoleNavTabs, type NavTab } from "./components/shared";
+import { playNewOrderBeep, unlockAudio } from "./lib/sound";
 import logo from "../assets/logo.png";
 
 // ─── App privada de staff ───────────────────────────────────────────────────
@@ -92,6 +93,10 @@ function AppStaffContent() {
   // OrderTicket más abajo). Vive acá (no en ReceptionistCreateOrder) porque el ticket tiene
   // que montarse en el DOM de AppStaff para que @media print lo encuentre al imprimir.
   const [printOrder, setPrintOrder] = useState<Order | null>(null);
+  // IDs de pedidos ya vistos, para que el polling de más abajo pueda notar cuándo aparece uno
+  // nuevo y sonar el beep (ver src/app/lib/sound.ts) — null hasta el primer fetch, así el primer
+  // refreshOrders() de la sesión completa la lista sin sonar por todos los pedidos preexistentes.
+  const knownOrderIds = useRef<Set<string> | null>(null);
 
   // Al loguearse (o al validar el token guardado contra /me), arranca en la primera
   // vista de la sección del usuario. La sección en sí no es un estado propio: es
@@ -124,7 +129,21 @@ function AppStaffContent() {
   // un alert cuando falla.
   const refreshOrders = () => {
     if (!token) return Promise.resolve();
-    return api.ordersList(token).then(setOrders);
+    return api.ordersList(token).then(fetched => {
+      // Red de contención del beep sonoro: si el push llegó antes (ver el listener de mensajes
+      // del Service Worker más abajo), este mismo pedido ya sonó y el debounce de
+      // playNewOrderBeep() evita que suene dos veces; si el push no llegó (permiso no otorgado,
+      // sin conexión al momento del push), este polling de 30s es lo que igual lo hace sonar,
+      // aunque con más demora. Solo para cocina: es el único rol con este aviso (ver
+      // "Aviso push a cocina" en CLAUDE.md).
+      if (user?.rol === "cocina") {
+        if (knownOrderIds.current && fetched.some(o => !knownOrderIds.current!.has(o.id))) {
+          playNewOrderBeep();
+        }
+        knownOrderIds.current = new Set(fetched.map(o => o.id));
+      }
+      setOrders(fetched);
+    });
   };
 
   // Carga los pedidos una vez que hay sesión y los vuelve a pedir cada 30s. Antes alcanzaba con
@@ -142,6 +161,28 @@ function AppStaffContent() {
     const interval = setInterval(() => { refreshOrders().catch(() => {}); }, 30_000);
     return () => clearInterval(interval);
   }, [token]);
+
+  // Desbloquea el AudioContext del beep (ver src/app/lib/sound.ts) en el primer toque/click a la
+  // app. Los navegadores no dejan reproducir audio sin un gesto previo del usuario — no hace falta
+  // que ese gesto tenga nada que ver con sonido, cualquier interacción real alcanza.
+  useEffect(() => {
+    const handler = () => unlockAudio();
+    window.addEventListener("pointerdown", handler, { once: true });
+    return () => window.removeEventListener("pointerdown", handler);
+  }, []);
+
+  // Beep instantáneo: cuando llega un push de "pedido nuevo" con la pestaña abierta, sw-push.js le
+  // manda este mensaje a todos los clientes (además de mostrar la notificación del sistema, que no
+  // puede llevar sonido propio — ver sound.ts). Solo tiene efecto para cocina, el único rol
+  // suscripto a este push.
+  useEffect(() => {
+    if (!user || user.rol !== "cocina" || !("serviceWorker" in navigator)) return;
+    const handler = (event: MessageEvent) => {
+      if (event.data?.type === "nuevo-pedido-push") playNewOrderBeep();
+    };
+    navigator.serviceWorker.addEventListener("message", handler);
+    return () => navigator.serviceWorker.removeEventListener("message", handler);
+  }, [user]);
 
   if (loading) {
     return <div className="min-h-screen flex items-center justify-center text-muted-foreground text-sm">Cargando…</div>;
