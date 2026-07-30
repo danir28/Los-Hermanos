@@ -1,6 +1,7 @@
 import type { Order } from "../../types";
 import { formatCurrency } from "../../lib/format";
 import { formatTimeLabel, nowDateTimeLabel } from "../../lib/time";
+import { CUSTOMER_SITE_URL } from "../../lib/siteUrls";
 
 // Comanda impresa al crear un pedido manualmente desde recepción o cocina — reemplaza el papel
 // que hoy escriben a mano y pegan en la caja. Imita el formato del comprobante que ya genera
@@ -27,6 +28,7 @@ export function OrderTicket({ order }: { order: Order }) {
       <hr />
       <p className="order-ticket-total">TOTAL: {formatCurrency(order.total)}</p>
       <p className="order-ticket-footer">DOCUMENTO NO VALIDO COMO FACTURA</p>
+      <p className="order-ticket-footer">{CUSTOMER_SITE_URL}</p>
     </div>
   );
 }
