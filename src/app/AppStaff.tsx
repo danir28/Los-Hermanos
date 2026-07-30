@@ -134,7 +134,7 @@ function AppStaffContent() {
       // Red de contención del beep sonoro: si el push llegó antes (ver el listener de mensajes
       // del Service Worker más abajo), este mismo pedido ya sonó y el debounce de
       // playNewOrderBeep() evita que suene dos veces; si el push no llegó (permiso no otorgado,
-      // sin conexión al momento del push), este polling de 30s es lo que igual lo hace sonar,
+      // sin conexión al momento del push), este polling de 10s es lo que igual lo hace sonar,
       // aunque con más demora. Solo para cocina: es el único rol con este aviso (ver
       // "Aviso push a cocina" en CLAUDE.md).
       if (user?.rol === "cocina") {
@@ -147,7 +147,7 @@ function AppStaffContent() {
     });
   };
 
-  // Carga los pedidos una vez que hay sesión y los vuelve a pedir cada 30s. Antes alcanzaba con
+  // Carga los pedidos una vez que hay sesión y los vuelve a pedir cada 10s. Antes alcanzaba con
   // cargarlos una sola vez al loguearse porque todo cambio de estado era manual (alguien lo
   // hacía clickeando acá mismo, así que el estado local ya quedaba al día). Desde que los
   // pedidos avanzan de estado solos según el reloj (ver advanceScheduledOrders en el backend),
@@ -156,10 +156,10 @@ function AppStaffContent() {
   useEffect(() => {
     if (!token) return;
     // Solo la primera carga avisa con un alert si falla — un refresco de fondo que falla (ej.
-    // un corte de red momentáneo) se reintenta solo en el próximo ciclo de 30s, sin interrumpir
-    // a quien esté trabajando con un alert cada 30 segundos.
+    // un corte de red momentáneo) se reintenta solo en el próximo ciclo de 10s, sin interrumpir
+    // a quien esté trabajando con un alert cada 10 segundos.
     refreshOrders().catch(e => window.alert(e instanceof Error ? e.message : "Error al cargar los pedidos"));
-    const interval = setInterval(() => { refreshOrders().catch(() => {}); }, 30_000);
+    const interval = setInterval(() => { refreshOrders().catch(() => {}); }, 10_000);
     return () => clearInterval(interval);
   }, [token]);
 
@@ -172,14 +172,19 @@ function AppStaffContent() {
     return () => window.removeEventListener("pointerdown", handler);
   }, []);
 
-  // Beep instantáneo: cuando llega un push de "pedido nuevo" con la pestaña abierta, sw-push.js le
-  // manda este mensaje a todos los clientes (además de mostrar la notificación del sistema, que no
-  // puede llevar sonido propio — ver sound.ts). Solo tiene efecto para cocina, el único rol
-  // suscripto a este push.
+  // Beep instantáneo y refresco al toque: cuando llega un push de "pedido nuevo" con la pestaña
+  // abierta, sw-push.js le manda este mensaje a todos los clientes (además de mostrar la
+  // notificación del sistema, que no puede llevar sonido propio — ver sound.ts). Antes esto solo
+  // sonaba el beep y el pedido nuevo no se veía en el Panel hasta el próximo ciclo del polling de
+  // 10s (más abajo) — ahora también llama a refreshOrders(), así aparece en pantalla en el mismo
+  // instante que suena. Solo tiene efecto para cocina, el único rol suscripto a este push.
   useEffect(() => {
     if (!user || user.rol !== "cocina" || !("serviceWorker" in navigator)) return;
     const handler = (event: MessageEvent) => {
-      if (event.data?.type === "nuevo-pedido-push") playNewOrderBeep();
+      if (event.data?.type === "nuevo-pedido-push") {
+        playNewOrderBeep();
+        refreshOrders().catch(() => {});
+      }
     };
     navigator.serviceWorker.addEventListener("message", handler);
     return () => navigator.serviceWorker.removeEventListener("message", handler);
@@ -236,7 +241,7 @@ function AppStaffContent() {
 
   // Tocar el logo/nombre de la sección en el header vuelve a la vista principal de esa sección
   // (dashboard para recepción/admin, panel para cocina — ver STAFF_DEFAULT_VIEW) y refresca los
-  // pedidos al toque, en vez de esperar hasta 30s del polling de fondo.
+  // pedidos al toque, en vez de esperar hasta 10s del polling de fondo.
   const goToSectionHome = () => {
     setStaffView(STAFF_DEFAULT_VIEW[user.rol]);
     refreshOrders().catch(e => window.alert(e instanceof Error ? e.message : "Error al actualizar los pedidos"));
