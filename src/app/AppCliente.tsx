@@ -50,6 +50,15 @@ export default function AppCliente() {
     setCustomerView(view);
   };
 
+  // Handler del logo del header: además de volver a "home", refresca el horario de atención —
+  // mismo criterio que el logo del header de staff (AppStaff.tsx, goToSectionHome), que al volver
+  // a la sección refresca los pedidos. Separado de goToView porque solo el logo necesita refrescar
+  // algo al navegar; el resto de los botones de nav (Inicio/Menú/Carrito) no.
+  const goHome = () => {
+    goToView("home");
+    refreshBusinessHours();
+  };
+
   // Agrega un producto al carrito: si ya estaba, suma 1 a la cantidad existente en vez de duplicar la línea.
   const addToCart = (product: Product) => setCart(prev => {
     const ex = prev.find(i => i.id === product.id);
@@ -91,7 +100,7 @@ export default function AppCliente() {
     <div className="min-h-screen bg-background" style={{ fontFamily: "'Inter', system-ui, sans-serif" }}>
       <div className="border-b border-border bg-card/95 backdrop-blur sticky top-0 z-50 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 flex items-center justify-between py-2">
-          <button onClick={() => goToView("home")} data-testid="header-home" className="flex items-center gap-2.5 px-2 hover:opacity-80 transition-opacity">
+          <button onClick={goHome} data-testid="header-home" className="flex items-center gap-2.5 px-2 hover:opacity-80 transition-opacity">
             <img src={logo} alt="" className="w-9 h-9 object-contain" />
             <p className="font-brand text-xl leading-none text-primary">Los Hermanos</p>
           </button>
