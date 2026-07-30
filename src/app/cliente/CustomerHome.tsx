@@ -5,6 +5,7 @@ import { formatCurrency } from "../lib/format";
 import { BUSINESS_PHONE_DISPLAY, BUSINESS_PHONE_TEL } from "../lib/contact";
 import type { BusinessHours, DaySchedule } from "../lib/api";
 import logo from "../../assets/logo.png";
+import heroImage from "../../assets/hero-restaurant.jpg";
 
 // Orden de visualización (lunes a domingo) y abreviatura de cada día — dayOfWeek en los datos
 // sigue el criterio del backend (0=domingo..6=sábado, igual a Date#getDay()).
@@ -48,7 +49,7 @@ export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: st
   return (
     <div>
       <div className="relative h-[500px] overflow-hidden">
-        <img src="https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=1400&h=600&fit=crop&auto=format" alt="Rotisería Los Hermanos" className="w-full h-full object-cover" />
+        <img src={heroImage} alt="Salón de Rotisería Los Hermanos" className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/75 via-black/45 to-transparent" />
         <img src={logo} alt="" className="absolute top-4 right-4 md:top-8 md:right-10 w-36 md:w-52 h-auto object-contain drop-shadow-lg" />
         <div className="absolute inset-0 flex flex-col justify-center px-8 md:px-16 max-w-2xl">
