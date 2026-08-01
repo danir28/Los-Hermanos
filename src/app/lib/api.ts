@@ -2,6 +2,25 @@ import type { Order, OrderStatus, OrderType, Product, SelectionType } from "../t
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
+// Las fotos de un producto pueden venir de dos orígenes: absolutas (las de stock de Unsplash con
+// las que se cargó el catálogo original) o relativas ("/uploads/products/xxx.jpg", lo que
+// devuelve el backend al subir una foto nueva desde el admin — ver server/src/products/uploads.ts),
+// servidas por ese mismo backend. El navegador resuelve una URL relativa contra el origen de la
+// PÁGINA (el frontend, en Netlify), no contra el backend (el droplet) — sin este paso, una foto
+// recién subida se pediría al dominio equivocado y quedaría rota (ícono de imagen rota). Se
+// normaliza acá, en el único punto de entrada de los datos de producto, para que el resto de la
+// app (CustomerMenu, AdminProducts, CartItem.image, OrderTicket, etc.) nunca tenga que pensar en
+// esto — ver los métodos productsList/productsCreate/... más abajo, todos pasan por acá.
+function resolveProductImageUrls(product: Product): Product {
+  return {
+    ...product,
+    images: product.images.map(img => ({
+      ...img,
+      url: /^https?:\/\//.test(img.url) ? img.url : `${API_URL}${img.url}`,
+    })),
+  };
+}
+
 // Error tipado con el status HTTP, para que los llamadores puedan distinguir casos
 // puntuales (ej. 404 en ordersLookup) de errores genéricos sin parsear el mensaje.
 export class ApiError extends Error {
@@ -204,13 +223,13 @@ export const api = {
   // ── Catálogo de productos ────────────────────────────────────────────────
   // Pública: la usa la app de cliente (menú, carta QR de mostrador) y la carga manual de
   // recepción/cocina — reemplaza el array PRODUCTS que antes vivía hardcodeado en el frontend.
-  productsList: () => request<Product[]>("/api/products"),
+  productsList: () => request<Product[]>("/api/products").then(products => products.map(resolveProductImageUrls)),
   // Solo-admin: alta/edición/baja de productos — ver memoria de proyecto sobre por qué el
   // catálogo lo carga el admin a mano en vez de sincronizarse con FUDO.
   productsCreate: (token: string, input: CreateProductInput) =>
-    request<Product>("/api/products", { method: "POST", token, body: JSON.stringify(input) }),
+    request<Product>("/api/products", { method: "POST", token, body: JSON.stringify(input) }).then(resolveProductImageUrls),
   productsUpdate: (token: string, id: number, patch: UpdateProductInput) =>
-    request<Product>(`/api/products/${id}`, { method: "PATCH", token, body: JSON.stringify(patch) }),
+    request<Product>(`/api/products/${id}`, { method: "PATCH", token, body: JSON.stringify(patch) }).then(resolveProductImageUrls),
   productsDelete: (token: string, id: number) =>
     request<{ ok: boolean }>(`/api/products/${id}`, { method: "DELETE", token }),
   // Sube una foto nueva al carrusel del producto. No pasa por request(): esa función fuerza
@@ -226,14 +245,14 @@ export const api = {
     });
     const body = await res.json().catch(() => null);
     if (!res.ok) throw new ApiError(res.status, body?.error ?? `Error ${res.status} al subir la imagen`);
-    return body as Product;
+    return resolveProductImageUrls(body as Product);
   },
   productsDeleteImage: (token: string, productId: number, imageId: number) =>
-    request<Product>(`/api/products/${productId}/images/${imageId}`, { method: "DELETE", token }),
+    request<Product>(`/api/products/${productId}/images/${imageId}`, { method: "DELETE", token }).then(resolveProductImageUrls),
   productsReorderImages: (token: string, productId: number, orderedIds: number[]) =>
-    request<Product>(`/api/products/${productId}/images/reorder`, { method: "PATCH", token, body: JSON.stringify({ orderedIds }) }),
+    request<Product>(`/api/products/${productId}/images/reorder`, { method: "PATCH", token, body: JSON.stringify({ orderedIds }) }).then(resolveProductImageUrls),
   // Reemplaza el set completo de grupos de opciones de un producto (ver
   // server/src/products/service.ts#replaceOptionGroups).
   productsSaveOptionGroups: (token: string, productId: number, groups: UpsertOptionGroupInput[]) =>
-    request<Product>(`/api/products/${productId}/option-groups`, { method: "PUT", token, body: JSON.stringify(groups) }),
+    request<Product>(`/api/products/${productId}/option-groups`, { method: "PUT", token, body: JSON.stringify(groups) }).then(resolveProductImageUrls),
 };
