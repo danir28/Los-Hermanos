@@ -54,7 +54,9 @@ export function ReceptionistOrders({ orders, onUpdateStatus }: { orders: Order[]
                   <td className="px-4 py-3 font-mono font-bold text-primary">#{order.orderNumber}</td>
                   <td className="px-4 py-3 font-semibold whitespace-nowrap">{order.customer}</td>
                   <td className="px-4 py-3 text-muted-foreground font-mono text-xs">{order.phone}</td>
-                  <td className="px-4 py-3 text-muted-foreground max-w-xs truncate">{order.items.map(i => `${i.name} ×${i.qty}`).join(", ")}</td>
+                  <td className="px-4 py-3 text-muted-foreground max-w-xs truncate" title={order.items.map(i => `${i.name} ×${i.qty}${i.notes ? ` (${i.notes})` : ""}`).join(", ")}>
+                    {order.items.map(i => `${i.name} ×${i.qty}${i.notes ? ` (${i.notes})` : ""}`).join(", ")}
+                  </td>
                   <td className="px-4 py-3 font-mono font-bold whitespace-nowrap">{formatCurrency(order.total)}</td>
                   <td className="px-4 py-3 whitespace-nowrap"><StatusBadge status={order.status} /></td>
                   <td className="px-4 py-3 font-mono text-sm whitespace-nowrap">

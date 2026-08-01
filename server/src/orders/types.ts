@@ -1,5 +1,7 @@
-// Ítem de un pedido tal como lo mandan el frontend o lo devuelve la API.
-export type OrderItemInput = { name: string; qty: number; price: number };
+// Ítem de un pedido tal como lo mandan el frontend o lo devuelve la API. notes es la
+// aclaración libre opcional del cliente/recepción (ej. "sin tomate") — texto plano, sin
+// validación contra el catálogo, que cocina lee tal cual.
+export type OrderItemInput = { name: string; qty: number; price: number; notes?: string | null };
 
 // Datos necesarios para crear un pedido nuevo (cliente, recepción, cocina). estimatedTime es el
 // turno de retiro elegido en el momento de crear el pedido (ver orders/slots.ts) — obligatorio:

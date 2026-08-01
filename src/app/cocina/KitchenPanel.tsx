@@ -76,6 +76,9 @@ export function KitchenPanel({ orders, token, onGoAssign, onPrint }: { orders: O
                     {order.items.map((item, j) => (
                       <span key={j} className="bg-secondary border border-border text-sm px-3 py-1 rounded-full">
                         <span className="font-mono font-bold text-primary">{item.qty}×</span> {item.name}
+                        {item.notes && (
+                          <span className="ml-1.5 font-semibold italic text-amber-700">· {item.notes}</span>
+                        )}
                       </span>
                     ))}
                   </div>

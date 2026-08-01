@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { ShoppingCart, Clock, Phone, User, Plus, Minus, Trash2 } from "lucide-react";
-import type { CartItem } from "../types";
+import { ShoppingCart, Clock, Phone, User, Plus, Minus, Trash2, MessageSquare } from "lucide-react";
+import { ITEM_NOTES_MAX_LENGTH, type CartItem } from "../types";
 import { formatCurrency } from "../lib/format";
 import { SlotPicker } from "../components/shared";
 
@@ -8,7 +8,7 @@ import { SlotPicker } from "../components/shared";
 // teléfono y horario de retiro. isOpenNow llega calculado desde el backend (ver AppCliente.tsx);
 // mientras no cargó todavía (null) no se bloquea el botón, para no mostrar un falso "cerrado" en
 // el primer render.
-export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: string, delta: number) => void; onConfirm: (name: string, phone: string, estimatedTime: string) => void; isOpenNow: boolean | null }) {
+export function CustomerCart({ cart, onUpdateCart, onUpdateNotes, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: string, delta: number) => void; onUpdateNotes: (id: string, notes: string) => void; onConfirm: (name: string, phone: string, estimatedTime: string) => void; isOpenNow: boolean | null }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [time, setTime] = useState<string | null>(null);
@@ -32,24 +32,34 @@ export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { car
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
         <div className="lg:col-span-2 space-y-3">
           {cart.map(item => (
-            <div key={item.id} className="bg-card border border-border rounded-2xl p-4 flex items-center gap-4">
-              <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
-                <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+            <div key={item.id} className="bg-card border border-border rounded-2xl p-4 space-y-3">
+              <div className="flex items-center gap-4">
+                <div className="w-16 h-16 rounded-xl overflow-hidden bg-muted shrink-0">
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground">{item.name}</h3>
+                  <span className="text-sm text-muted-foreground font-mono">{formatCurrency(item.price)} c/u</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button onClick={() => onUpdateCart(item.id, -1)} data-testid={`qty-decrease-${item.id}`} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
+                    {item.qty === 1 ? <Trash2 size={13} className="text-destructive" /> : <Minus size={13} />}
+                  </button>
+                  <span className="w-7 text-center font-mono font-bold">{item.qty}</span>
+                  <button onClick={() => onUpdateCart(item.id, 1)} data-testid={`qty-increase-${item.id}`} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
+                    <Plus size={13} />
+                  </button>
+                </div>
+                <span className="font-mono font-bold text-foreground w-24 text-right">{formatCurrency(item.price * item.qty)}</span>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-foreground">{item.name}</h3>
-                <span className="text-sm text-muted-foreground font-mono">{formatCurrency(item.price)} c/u</span>
+              <div className="relative">
+                <MessageSquare className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={14} />
+                <input type="text" value={item.notes ?? ""} maxLength={ITEM_NOTES_MAX_LENGTH}
+                  onChange={e => onUpdateNotes(item.id, e.target.value)}
+                  data-testid={`item-notes-${item.id}`}
+                  placeholder="Ej: sin tomate, sin mayonesa..."
+                  className="w-full pl-9 pr-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm placeholder:text-muted-foreground" />
               </div>
-              <div className="flex items-center gap-2">
-                <button onClick={() => onUpdateCart(item.id, -1)} data-testid={`qty-decrease-${item.id}`} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
-                  {item.qty === 1 ? <Trash2 size={13} className="text-destructive" /> : <Minus size={13} />}
-                </button>
-                <span className="w-7 text-center font-mono font-bold">{item.qty}</span>
-                <button onClick={() => onUpdateCart(item.id, 1)} data-testid={`qty-increase-${item.id}`} className="w-8 h-8 rounded-full border border-border flex items-center justify-center hover:bg-muted transition-colors">
-                  <Plus size={13} />
-                </button>
-              </div>
-              <span className="font-mono font-bold text-foreground w-24 text-right">{formatCurrency(item.price * item.qty)}</span>
             </div>
           ))}
         </div>

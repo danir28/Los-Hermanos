@@ -50,7 +50,7 @@ function toDTO(order: OrderWithItems): OrderDTO {
     orderNumber: toDisplayNumber(order.orderNumber),
     customer: order.customer,
     phone: order.phone,
-    items: order.items.map(i => ({ name: i.name, qty: i.qty, price: Number(i.price) })),
+    items: order.items.map(i => ({ name: i.name, qty: i.qty, price: Number(i.price), notes: i.notes })),
     status: order.status,
     createdAt: formatCreatedAt(order.createdAt),
     estimatedTime: order.estimatedTime,
@@ -102,7 +102,7 @@ export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
         status: "Programado",
         estimatedTime: input.estimatedTime,
         total,
-        items: { create: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })) },
+        items: { create: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes?.trim() || null })) },
       },
       include: { items: true },
     });

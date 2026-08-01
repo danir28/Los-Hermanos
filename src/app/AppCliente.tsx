@@ -75,6 +75,12 @@ export default function AppCliente() {
     prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
   );
 
+  // Actualiza la aclaración libre de una línea puntual del carrito (ej. "sin tomate") — ver
+  // CartItem.notes en types.ts y la cajita de CustomerCart.
+  const updateCartNotes = (id: string, notes: string) => setCart(prev =>
+    prev.map(i => i.id === id ? { ...i, notes } : i)
+  );
+
   // Crea el pedido en el backend (checkout) y lo guarda para mostrar la confirmación y
   // precargar el seguimiento, sin necesidad de un segundo pedido al servidor. estimatedTime es
   // el turno de retiro elegido en el SlotPicker de CustomerCart — a diferencia de la carga
@@ -86,7 +92,7 @@ export default function AppCliente() {
       const newOrder = await api.ordersCreate({
         customer: name,
         phone,
-        items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+        items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes })),
         type: "online" as OrderType,
         estimatedTime,
       });
@@ -145,7 +151,7 @@ export default function AppCliente() {
 
       {customerView === "home"         && <CustomerHome onNavigate={goToView} businessHours={businessHours} />}
       {customerView === "menu"         && <CustomerMenu cart={cart} onAddToCart={addToCart} onNavigate={goToView} initialCategory={menuCategory} />}
-      {customerView === "cart"         && <CustomerCart cart={cart} onUpdateCart={updateCart} onConfirm={confirmOrder} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
+      {customerView === "cart"         && <CustomerCart cart={cart} onUpdateCart={updateCart} onUpdateNotes={updateCartNotes} onConfirm={confirmOrder} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
       {customerView === "confirmation" && confirmedOrder && <CustomerConfirmation order={confirmedOrder} onTrack={() => goToView("tracking")} />}
       {customerView === "tracking"     && <CustomerTracking preloadOrder={confirmedOrder ?? undefined} />}
     </div>

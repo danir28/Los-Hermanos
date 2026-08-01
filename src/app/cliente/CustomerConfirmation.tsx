@@ -25,9 +25,12 @@ export function CustomerConfirmation({ order, onTrack }: { order: Order; onTrack
         <div className="mb-4"><StatusBadge status={order.status} /></div>
         <div className="space-y-1.5 mb-4">
           {order.items.map((item, i) => (
-            <div key={i} className="flex justify-between text-sm">
-              <span className="text-muted-foreground">{item.name} ×{item.qty}</span>
-              <span className="font-mono">{formatCurrency(item.price * item.qty)}</span>
+            <div key={i} className="text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">{item.name} ×{item.qty}</span>
+                <span className="font-mono">{formatCurrency(item.price * item.qty)}</span>
+              </div>
+              {item.notes && <p className="text-xs italic text-amber-700 mt-0.5">{item.notes}</p>}
             </div>
           ))}
           <div className="pt-2 border-t border-border flex justify-between font-bold text-sm">

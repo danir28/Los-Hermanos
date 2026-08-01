@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Search, CheckCircle, Plus, Minus, X } from "lucide-react";
-import type { CartItem, OrderType, Product } from "../types";
+import { Search, CheckCircle, Plus, Minus, X, MessageSquare } from "lucide-react";
+import { ITEM_NOTES_MAX_LENGTH, type CartItem, type OrderType, type Product } from "../types";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 import { ConfirmDialog, ProductOptionsModal, SlotPicker } from "../components/shared";
@@ -51,6 +51,12 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
   // Suma/resta delta a la cantidad de una línea y la quita del pedido si llega a 0.
   const updateQty = (id: string, delta: number) => setOrderCart(prev =>
     prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
+  );
+
+  // Actualiza la aclaración libre de una línea puntual (ej. "sin tomate") — lo que el cliente le
+  // dicta por teléfono o en persona. Mismo criterio que updateCartNotes en AppCliente.tsx.
+  const updateNotes = (id: string, notes: string) => setOrderCart(prev =>
+    prev.map(i => i.id === id ? { ...i, notes } : i)
   );
 
   const total = orderCart.reduce((s, i) => s + i.price * i.qty, 0);
@@ -191,11 +197,21 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
             {orderCart.length === 0 ? (
               <p className="text-sm text-muted-foreground text-center py-4">Ningún producto agregado aún</p>
             ) : (
-              <div className="space-y-2">
+              <div className="space-y-2.5">
                 {orderCart.map(item => (
-                  <div key={item.id} className="flex justify-between items-center text-sm">
-                    <span>{item.name} <span className="text-muted-foreground font-mono">×{item.qty}</span></span>
-                    <span className="font-mono font-semibold">{formatCurrency(item.price * item.qty)}</span>
+                  <div key={item.id} className="space-y-1">
+                    <div className="flex justify-between items-center text-sm">
+                      <span>{item.name} <span className="text-muted-foreground font-mono">×{item.qty}</span></span>
+                      <span className="font-mono font-semibold">{formatCurrency(item.price * item.qty)}</span>
+                    </div>
+                    <div className="relative">
+                      <MessageSquare className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={12} />
+                      <input type="text" value={item.notes ?? ""} maxLength={ITEM_NOTES_MAX_LENGTH}
+                        onChange={e => updateNotes(item.id, e.target.value)}
+                        data-testid={`item-notes-${item.id}`}
+                        placeholder="Ej: sin tomate, sin mayonesa..."
+                        className="w-full pl-7 pr-2.5 py-1.5 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-xs placeholder:text-muted-foreground" />
+                    </div>
                   </div>
                 ))}
                 <div className="border-t border-border pt-2 mt-1 flex justify-between font-bold text-sm">

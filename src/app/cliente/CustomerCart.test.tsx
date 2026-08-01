@@ -17,10 +17,11 @@ async function setup(isOpenNow: boolean | null = true) {
   ]);
   const onConfirm = vi.fn();
   const onUpdateCart = vi.fn();
+  const onUpdateNotes = vi.fn();
   const user = userEvent.setup();
-  render(<CustomerCart cart={CART} onUpdateCart={onUpdateCart} onConfirm={onConfirm} isOpenNow={isOpenNow} />);
+  render(<CustomerCart cart={CART} onUpdateCart={onUpdateCart} onUpdateNotes={onUpdateNotes} onConfirm={onConfirm} isOpenNow={isOpenNow} />);
   await screen.findByRole("button", { name: "19:00" });
-  return { onConfirm, onUpdateCart, user };
+  return { onConfirm, onUpdateCart, onUpdateNotes, user };
 }
 
 // Las tres condiciones (nombre + teléfono + horario) ya eran obligatorias acá desde antes de

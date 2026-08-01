@@ -5,8 +5,14 @@
 // ProductOptionsModal), así dos selecciones distintas del mismo producto conviven como líneas
 // separadas. name/price ya vienen resueltos con la selección de opciones incluida (ver
 // ProductOptionsModal) — el backend solo guarda ese resultado como foto del pedido, no sabe
-// nada de productId ni de opciones.
-export type CartItem = { id: string; productId: number; name: string; price: number; qty: number; image: string };
+// nada de productId ni de opciones. notes es la aclaración libre opcional de esa línea puntual
+// (ej. "sin tomate"), editable desde CustomerCart/ReceptionistCreateOrder — no afecta el precio
+// ni identifica la línea, es texto plano que cocina lee tal cual.
+export type CartItem = { id: string; productId: number; name: string; price: number; qty: number; image: string; notes?: string };
+
+// Largo máximo de CartItem.notes, compartido entre CustomerCart y ReceptionistCreateOrder para
+// que el límite (y lo que cocina puede llegar a recibir) sea consistente sin importar el canal.
+export const ITEM_NOTES_MAX_LENGTH = 140;
 
 // Estados posibles del ciclo de vida de un pedido. Ya no incluye "Pendiente": todo pedido nace
 // "Programado" con un horario de retiro elegido (decisión del 26/7/2026 — ver
@@ -24,7 +30,7 @@ export type OrderType = "online" | "presencial" | "telefónico" | "whatsapp";
 // no confundir con createdAt, que solo trae la hora ("HH:MM") y es cuándo se creó el pedido.
 export type Order = {
   id: string; orderNumber: string; customer: string; phone: string;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; notes?: string | null }[];
   status: OrderStatus; createdAt: string; estimatedTime: string | null;
   total: number; type: OrderType; deliveredAt: string | null;
 };

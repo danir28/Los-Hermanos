@@ -64,6 +64,8 @@ model OrderCounter {
 
 // Ítem de un pedido: producto, cantidad y precio al momento de la compra (no el
 // precio actual del catálogo, para no alterar pedidos ya facturados si cambia el precio).
+// notes es la aclaración libre que carga quien pide (ej. "sin tomate") — opcional, nullable,
+// nunca se valida contra el catálogo: es texto plano que cocina lee tal cual.
 model OrderItem {
   id      String  @id @default(uuid())
   orderId String
@@ -71,6 +73,7 @@ model OrderItem {
   name    String
   qty     Int
   price   Decimal @db.Decimal(10, 2)
+  notes   String?
 
   @@index([orderId])
   @@map("order_items")

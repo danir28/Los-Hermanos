@@ -45,7 +45,7 @@ export type FudoSyncResult = { synced: number; syncedAt: string };
 export type CreateOrderInput = {
   customer: string;
   phone: string;
-  items: { name: string; qty: number; price: number }[];
+  items: { name: string; qty: number; price: number; notes?: string }[];
   type: OrderType;
   estimatedTime: string;
 };

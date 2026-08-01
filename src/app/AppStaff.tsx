@@ -205,7 +205,7 @@ function AppStaffContent() {
       const newOrder = await api.ordersCreate({
         customer: input.customer,
         phone: input.phone,
-        items: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price })),
+        items: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes })),
         type: input.type,
         estimatedTime: input.estimatedTime,
       });
