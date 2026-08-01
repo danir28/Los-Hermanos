@@ -4,3 +4,7 @@ node_modules
 .env.test
 
 /src/generated/prisma
+
+# Fotos de producto subidas desde el admin (ver src/products/uploads.ts) — viven en disco del
+# droplet de producción, no en git.
+/uploads

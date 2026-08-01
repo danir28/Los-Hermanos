@@ -7,3 +7,5 @@ export { OrderTicket } from "./OrderTicket";
 export { MostradorIcon } from "./MostradorIcon";
 export { MostradorWordmark } from "./MostradorWordmark";
 export { MostradorWatermark } from "./MostradorWatermark";
+export { ImageCarousel } from "./ImageCarousel";
+export { ProductOptionsModal } from "./ProductOptionsModal";

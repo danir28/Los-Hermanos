@@ -14,7 +14,6 @@ export const TEST_PRODUCT = {
   category: "Empanadas",
   price: 1500,
   description: "Producto sembrado para los tests E2E.",
-  image: "https://images.unsplash.com/photo-1631452180519-c014fe946bc7",
   featured: false,
   active: true,
   outOfStock: false,

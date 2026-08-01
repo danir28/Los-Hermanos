@@ -1,5 +1,12 @@
-// Ítem del carrito de compras del cliente (producto + cantidad elegida).
-export type CartItem = { id: number; name: string; price: number; qty: number; image: string };
+// Ítem del carrito de compras del cliente (producto + cantidad elegida). id identifica la LÍNEA
+// del carrito, no el producto: para un producto sin opciones es `String(productId)` (mismo
+// comportamiento de siempre: agregarlo de nuevo suma cantidad a la misma línea); para un
+// producto con optionGroups, cada configuración elegida genera su propio id (ver
+// ProductOptionsModal), así dos selecciones distintas del mismo producto conviven como líneas
+// separadas. name/price ya vienen resueltos con la selección de opciones incluida (ver
+// ProductOptionsModal) — el backend solo guarda ese resultado como foto del pedido, no sabe
+// nada de productId ni de opciones.
+export type CartItem = { id: string; productId: number; name: string; price: number; qty: number; image: string };
 
 // Estados posibles del ciclo de vida de un pedido. Ya no incluye "Pendiente": todo pedido nace
 // "Programado" con un horario de retiro elegido (decisión del 26/7/2026 — ver
@@ -22,8 +29,30 @@ export type Order = {
   total: number; type: OrderType; deliveredAt: string | null;
 };
 
-// Producto del catálogo de la rotisería.
-export type Product = { id: number; name: string; category: string; price: number; description: string; image: string; featured: boolean; active: boolean; outOfStock: boolean };
+// Una foto del carrusel de un producto, ordenada por sortOrder (la primera es la miniatura).
+export type ProductImage = { id: number; url: string; sortOrder: number };
+
+// Tipo de selección de un grupo de opciones de producto (ver server/src/products/types.ts):
+// "single" = radio (una sola opción), "multiple" = checkboxes (0 o más), "quantity" = reparto de
+// unidades entre las opciones del grupo, la suma tiene que dar exacto quantityTarget.
+export type SelectionType = "single" | "multiple" | "quantity";
+
+export type ProductOption = { id: number; name: string; priceDelta: number; sortOrder: number };
+
+export type ProductOptionGroup = {
+  id: number;
+  name: string;
+  selectionType: SelectionType;
+  required: boolean;
+  quantityTarget: number | null;
+  sortOrder: number;
+  options: ProductOption[];
+};
+
+// Producto del catálogo de la rotisería. images reemplaza el viejo campo `image: string` único
+// (carrusel de fotos); optionGroups son las variantes configurables (sabor, agregados, etc.) que
+// hay que resolver antes de agregarlo al carrito cuando no está vacío — ver ProductOptionsModal.
+export type Product = { id: number; name: string; category: string; price: number; description: string; images: ProductImage[]; optionGroups: ProductOptionGroup[]; featured: boolean; active: boolean; outOfStock: boolean };
 
 // Configuración visual (color, ícono, etiqueta) asociada a cada OrderStatus.
 export type StatusCfg = { dot: string; badge: string; label: string; Icon: any };

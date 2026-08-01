@@ -53,7 +53,6 @@ export default async function globalSetup() {
       SEED_PRODUCT_CATEGORY: TEST_PRODUCT.category,
       SEED_PRODUCT_PRICE: String(TEST_PRODUCT.price),
       SEED_PRODUCT_DESCRIPTION: TEST_PRODUCT.description,
-      SEED_PRODUCT_IMAGE: TEST_PRODUCT.image,
     },
   });
 }

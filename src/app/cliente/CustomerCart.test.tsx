@@ -5,7 +5,7 @@ import { api } from "../lib/api";
 import type { CartItem } from "../types";
 import { CustomerCart } from "./CustomerCart";
 
-const CART: CartItem[] = [{ id: 1, name: "Empanada de carne", price: 1500, qty: 2, image: "" }];
+const CART: CartItem[] = [{ id: "1", productId: 1, name: "Empanada de carne", price: 1500, qty: 2, image: "" }];
 
 afterEach(() => {
   vi.restoreAllMocks();

@@ -20,6 +20,10 @@ export const app = express();
 app.use(cors({ origin: config.corsOrigin }));
 app.use(express.json());
 
+// Fotos de producto subidas desde el admin (ver products/uploads.ts) — servidas directo como
+// estáticos, público (las ve cualquiera que cargue el menú, no hace falta auth para verlas).
+app.use("/uploads", express.static("uploads"));
+
 // Chequeo de salud del backend, público y sin dependencias (no toca la DB): solo confirma
 // que el proceso está arriba y respondiendo.
 app.get("/api/health", (_req, res) => res.json({ ok: true }));

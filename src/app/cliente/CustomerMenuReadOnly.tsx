@@ -48,7 +48,7 @@ export function CustomerMenuReadOnly() {
           {filtered.map(product => (
             <div key={product.id} className={`bg-card border rounded-2xl overflow-hidden transition-all ${product.outOfStock ? "border-border opacity-70" : "border-border"}`}>
               <div className="h-40 overflow-hidden bg-muted relative">
-                <img src={product.image} alt={product.name} className={`w-full h-full object-cover ${product.outOfStock ? "grayscale" : ""}`} />
+                <img src={product.images[0]?.url} alt={product.name} className={`w-full h-full object-cover ${product.outOfStock ? "grayscale" : ""}`} />
                 {product.outOfStock && (
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
                     <span className="bg-white text-gray-800 font-bold text-sm px-4 py-1.5 rounded-full shadow">Sin stock</span>

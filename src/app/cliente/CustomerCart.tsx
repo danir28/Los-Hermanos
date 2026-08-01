@@ -8,7 +8,7 @@ import { SlotPicker } from "../components/shared";
 // teléfono y horario de retiro. isOpenNow llega calculado desde el backend (ver AppCliente.tsx);
 // mientras no cargó todavía (null) no se bloquea el botón, para no mostrar un falso "cerrado" en
 // el primer render.
-export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: number, delta: number) => void; onConfirm: (name: string, phone: string, estimatedTime: string) => void; isOpenNow: boolean | null }) {
+export function CustomerCart({ cart, onUpdateCart, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: string, delta: number) => void; onConfirm: (name: string, phone: string, estimatedTime: string) => void; isOpenNow: boolean | null }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [time, setTime] = useState<string | null>(null);

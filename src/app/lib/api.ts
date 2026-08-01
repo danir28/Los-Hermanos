@@ -1,4 +1,4 @@
-import type { Order, OrderStatus, OrderType, Product } from "../types";
+import type { Order, OrderStatus, OrderType, Product, SelectionType } from "../types";
 
 const API_URL = import.meta.env.VITE_API_URL ?? "http://localhost:4000";
 
@@ -98,18 +98,32 @@ export type SlotTimeRange = { startTime: string; endTime: string };
 export type SlotWindowDay = { dayOfWeek: number; ranges: SlotTimeRange[] };
 export type SlotWindows = { days: SlotWindowDay[] };
 
-// Datos para crear/editar un producto del catálogo (ver server/src/products/types.ts).
+// Datos para crear/editar un producto del catálogo (ver server/src/products/types.ts). Ya no
+// incluye `image`: las fotos se administran por endpoints propios (productsUploadImage y cía.),
+// no por este payload — un producto nace sin fotos y se le suben después de creado.
 export type CreateProductInput = {
   name: string;
   category: string;
   price: number;
   description: string;
-  image: string;
   featured: boolean;
   active: boolean;
   outOfStock: boolean;
 };
 export type UpdateProductInput = Partial<CreateProductInput>;
+
+// Payload para reemplazar el set completo de grupos de opciones de un producto (ver
+// server/src/products/types.ts#CreateOptionGroupInput) — mismo shape sin id (se generan en el
+// backend al crearlos).
+export type UpsertOptionInput = { name: string; priceDelta: number; sortOrder: number };
+export type UpsertOptionGroupInput = {
+  name: string;
+  selectionType: SelectionType;
+  required: boolean;
+  quantityTarget: number | null;
+  sortOrder: number;
+  options: UpsertOptionInput[];
+};
 
 export const api = {
   // ── Auth (pública la de login; el resto exige un token ya emitido) ─────────
@@ -199,4 +213,27 @@ export const api = {
     request<Product>(`/api/products/${id}`, { method: "PATCH", token, body: JSON.stringify(patch) }),
   productsDelete: (token: string, id: number) =>
     request<{ ok: boolean }>(`/api/products/${id}`, { method: "DELETE", token }),
+  // Sube una foto nueva al carrusel del producto. No pasa por request(): esa función fuerza
+  // "Content-Type: application/json" en todos los pedidos, y un multipart necesita que el
+  // browser arme el header con el boundary correcto — por eso el fetch se arma acá directo.
+  productsUploadImage: async (token: string, productId: number, file: File): Promise<Product> => {
+    const form = new FormData();
+    form.append("image", file);
+    const res = await fetch(`${API_URL}/api/products/${productId}/images`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    const body = await res.json().catch(() => null);
+    if (!res.ok) throw new ApiError(res.status, body?.error ?? `Error ${res.status} al subir la imagen`);
+    return body as Product;
+  },
+  productsDeleteImage: (token: string, productId: number, imageId: number) =>
+    request<Product>(`/api/products/${productId}/images/${imageId}`, { method: "DELETE", token }),
+  productsReorderImages: (token: string, productId: number, orderedIds: number[]) =>
+    request<Product>(`/api/products/${productId}/images/reorder`, { method: "PATCH", token, body: JSON.stringify({ orderedIds }) }),
+  // Reemplaza el set completo de grupos de opciones de un producto (ver
+  // server/src/products/service.ts#replaceOptionGroups).
+  productsSaveOptionGroups: (token: string, productId: number, groups: UpsertOptionGroupInput[]) =>
+    request<Product>(`/api/products/${productId}/option-groups`, { method: "PUT", token, body: JSON.stringify(groups) }),
 };

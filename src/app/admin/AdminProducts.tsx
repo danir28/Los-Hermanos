@@ -1,25 +1,51 @@
 import { useState } from "react";
-import { Pencil, Plus, Search, Trash2, X } from "lucide-react";
-import type { Product } from "../types";
-import { api } from "../lib/api";
+import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
+import type { Product, ProductOptionGroup, SelectionType } from "../types";
+import { api, type UpsertOptionGroupInput } from "../lib/api";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 import { useAuth } from "../auth";
 import { ConfirmDialog } from "../components/shared";
 
 // Formulario vacío para dar de alta un producto nuevo — los booleans arrancan en los mismos
-// defaults que ya usaba el array hardcodeado (activo sí, destacado/sin stock no).
-const EMPTY_FORM = { name: "", category: "", price: "", description: "", image: "", featured: false, active: true, outOfStock: false };
+// defaults que ya usaba el array hardcodeado (activo sí, destacado/sin stock no). Ya no incluye
+// "image": las fotos se cargan aparte, una vez que el producto existe (ver sección Fotos).
+const EMPTY_FORM = { name: "", category: "", price: "", description: "", featured: false, active: true, outOfStock: false };
 type FormState = typeof EMPTY_FORM;
 
 function productToForm(p: Product): FormState {
-  return { name: p.name, category: p.category, price: String(p.price), description: p.description, image: p.image, featured: p.featured, active: p.active, outOfStock: p.outOfStock };
+  return { name: p.name, category: p.category, price: String(p.price), description: p.description, featured: p.featured, active: p.active, outOfStock: p.outOfStock };
 }
+
+// Forma local de un grupo/opción mientras se edita en el sub-formulario de "Opciones del
+// producto" — sin ids (se generan en el backend al guardar) y con quantityTarget/priceDelta como
+// texto, más simple para inputs controlados; se convierten a UpsertOptionGroupInput recién al
+// guardar (ver buildOptionGroupsPayload).
+type LocalOption = { name: string; priceDelta: string };
+type LocalGroup = { name: string; selectionType: SelectionType; required: boolean; quantityTarget: string; options: LocalOption[] };
+
+function groupToLocal(g: ProductOptionGroup): LocalGroup {
+  return {
+    name: g.name,
+    selectionType: g.selectionType,
+    required: g.required,
+    quantityTarget: g.quantityTarget !== null ? String(g.quantityTarget) : "",
+    options: g.options.map(o => ({ name: o.name, priceDelta: String(o.priceDelta) })),
+  };
+}
+
+const SELECTION_TYPE_LABELS: Record<SelectionType, string> = {
+  single: "Selector único",
+  multiple: "Selector múltiple",
+  quantity: "Cantidad a repartir",
+};
 
 // Pantalla de admin para cargar y editar el catálogo de productos — reemplaza al array
 // hardcodeado que vivía en src/app/data/products.ts ahora que no hay FUDO conectado a este
 // sistema (ver memoria de proyecto sobre la reunión con el cliente del 24/7/2026): el admin es
-// quien mantiene el catálogo y los precios a mano.
+// quien mantiene el catálogo y los precios a mano. Fotos y opciones (grupos de variantes tipo
+// sabor/agregados) se administran en secciones aparte, solo visibles con el producto ya guardado
+// (necesitan su id para asociarse).
 export function AdminProducts() {
   const { token } = useAuth();
   const { products, categories, loading, refresh } = useProducts();
@@ -32,6 +58,13 @@ export function AdminProducts() {
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("Todos");
 
+  const [uploading, setUploading] = useState(false);
+  const [imagesError, setImagesError] = useState<string | null>(null);
+
+  const [optionGroups, setOptionGroups] = useState<LocalGroup[]>([]);
+  const [savingOptions, setSavingOptions] = useState(false);
+  const [optionsError, setOptionsError] = useState<string | null>(null);
+
   const categoryOptions = categories.filter(c => c !== "Todos");
   // Filtro de la lista (no del formulario de alta/edición): por categoría y por nombre, para
   // que sea rápido encontrar un producto puntual entre los 61 y pispear a cambiarle el precio.
@@ -41,8 +74,13 @@ export function AdminProducts() {
     return true;
   });
 
-  const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setError(null); setFormOpen(true); };
-  const openEdit = (p: Product) => { setEditingId(p.id); setForm(productToForm(p)); setError(null); setFormOpen(true); };
+  // Producto que se está editando, releído de `products` en cada render (no de una copia local)
+  // para que Fotos/Opciones siempre reflejen lo último que devolvió el backend después de cada
+  // subida/borrado/reorden.
+  const editingProduct = editingId !== null ? products.find(p => p.id === editingId) ?? null : null;
+
+  const openCreate = () => { setEditingId(null); setForm(EMPTY_FORM); setError(null); setOptionGroups([]); setFormOpen(true); };
+  const openEdit = (p: Product) => { setEditingId(p.id); setForm(productToForm(p)); setError(null); setOptionGroups(p.optionGroups.map(groupToLocal)); setImagesError(null); setOptionsError(null); setFormOpen(true); };
   const closeForm = () => { setFormOpen(false); setEditingId(null); };
 
   // Valida y guarda el formulario: crea si editingId es null, edita si no. El precio viaja como
@@ -50,21 +88,26 @@ export function AdminProducts() {
   const handleSave = async () => {
     if (!token) return;
     const price = Number(form.price);
-    if (!form.name.trim() || !form.category.trim() || !form.description.trim() || !form.image.trim() || !Number.isFinite(price) || price <= 0) {
-      setError("Completá nombre, categoría, descripción, imagen y un precio válido.");
+    if (!form.name.trim() || !form.category.trim() || !form.description.trim() || !Number.isFinite(price) || price <= 0) {
+      setError("Completá nombre, categoría, descripción y un precio válido.");
       return;
     }
     setSaving(true);
     setError(null);
     try {
-      const input = { name: form.name.trim(), category: form.category.trim(), price, description: form.description.trim(), image: form.image.trim(), featured: form.featured, active: form.active, outOfStock: form.outOfStock };
+      const input = { name: form.name.trim(), category: form.category.trim(), price, description: form.description.trim(), featured: form.featured, active: form.active, outOfStock: form.outOfStock };
       if (editingId === null) {
-        await api.productsCreate(token, input);
+        const created = await api.productsCreate(token, input);
+        refresh();
+        // Sigue en el formulario, ahora en modo edición del producto recién creado, para poder
+        // cargarle fotos/opciones sin un segundo paso de "buscarlo en la tabla y editarlo".
+        setEditingId(created.id);
+        setOptionGroups([]);
       } else {
         await api.productsUpdate(token, editingId, input);
+        refresh();
+        closeForm();
       }
-      refresh();
-      closeForm();
     } catch (e) {
       setError(e instanceof Error ? e.message : "Error al guardar el producto");
     } finally {
@@ -92,6 +135,105 @@ export function AdminProducts() {
       refresh();
     } catch (e) {
       window.alert(e instanceof Error ? e.message : "Error al borrar el producto");
+    }
+  };
+
+  // ── Fotos ──────────────────────────────────────────────────────────────
+  const handleUpload = async (file: File) => {
+    if (!token || editingId === null) return;
+    setUploading(true);
+    setImagesError(null);
+    try {
+      await api.productsUploadImage(token, editingId, file);
+      refresh();
+    } catch (e) {
+      setImagesError(e instanceof Error ? e.message : "Error al subir la imagen");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteImage = async (imageId: number) => {
+    if (!token || editingId === null) return;
+    try {
+      await api.productsDeleteImage(token, editingId, imageId);
+      refresh();
+    } catch (e) {
+      setImagesError(e instanceof Error ? e.message : "Error al borrar la imagen");
+    }
+  };
+
+  const handleMoveImage = async (index: number, dir: -1 | 1) => {
+    if (!token || editingId === null || !editingProduct) return;
+    const ids = editingProduct.images.map(img => img.id);
+    const target = index + dir;
+    if (target < 0 || target >= ids.length) return;
+    [ids[index], ids[target]] = [ids[target], ids[index]];
+    try {
+      await api.productsReorderImages(token, editingId, ids);
+      refresh();
+    } catch (e) {
+      setImagesError(e instanceof Error ? e.message : "Error al reordenar las fotos");
+    }
+  };
+
+  // ── Opciones del producto ─────────────────────────────────────────────
+  const addGroup = () => setOptionGroups(gs => [...gs, { name: "", selectionType: "single", required: false, quantityTarget: "", options: [] }]);
+  const updateGroup = (i: number, patch: Partial<LocalGroup>) => setOptionGroups(gs => gs.map((g, idx) => idx === i ? { ...g, ...patch } : g));
+  const removeGroup = (i: number) => setOptionGroups(gs => gs.filter((_, idx) => idx !== i));
+  const moveGroup = (i: number, dir: -1 | 1) => setOptionGroups(gs => {
+    const target = i + dir;
+    if (target < 0 || target >= gs.length) return gs;
+    const copy = [...gs];
+    [copy[i], copy[target]] = [copy[target], copy[i]];
+    return copy;
+  });
+
+  const addOption = (gi: number) => updateGroup(gi, { options: [...optionGroups[gi].options, { name: "", priceDelta: "0" }] });
+  const updateOption = (gi: number, oi: number, patch: Partial<LocalOption>) =>
+    updateGroup(gi, { options: optionGroups[gi].options.map((o, idx) => idx === oi ? { ...o, ...patch } : o) });
+  const removeOption = (gi: number, oi: number) => updateGroup(gi, { options: optionGroups[gi].options.filter((_, idx) => idx !== oi) });
+
+  // Valida y convierte el estado local (todo en texto, cómodo para inputs) al payload tipado que
+  // espera el backend. Devuelve null si algo no es válido, con el motivo en optionsError.
+  const buildOptionGroupsPayload = (): UpsertOptionGroupInput[] | null => {
+    const payload: UpsertOptionGroupInput[] = [];
+    for (const g of optionGroups) {
+      if (!g.name.trim()) { setOptionsError("Todos los grupos necesitan un nombre."); return null; }
+      if (g.options.length === 0) { setOptionsError(`El grupo "${g.name}" necesita al menos una opción.`); return null; }
+      let quantityTarget: number | null = null;
+      if (g.selectionType === "quantity") {
+        quantityTarget = Number(g.quantityTarget);
+        if (!Number.isInteger(quantityTarget) || quantityTarget <= 0) {
+          setOptionsError(`El grupo "${g.name}" es de tipo "Cantidad a repartir": necesita un total de unidades válido.`);
+          return null;
+        }
+      }
+      const options = [];
+      for (const o of g.options) {
+        if (!o.name.trim()) { setOptionsError(`Alguna opción del grupo "${g.name}" no tiene nombre.`); return null; }
+        const priceDelta = Number(o.priceDelta);
+        if (!Number.isFinite(priceDelta)) { setOptionsError(`El precio extra de "${o.name}" no es válido.`); return null; }
+        options.push({ name: o.name.trim(), priceDelta, sortOrder: options.length });
+      }
+      payload.push({ name: g.name.trim(), selectionType: g.selectionType, required: g.required, quantityTarget, sortOrder: payload.length, options });
+    }
+    return payload;
+  };
+
+  const handleSaveOptions = async () => {
+    if (!token || editingId === null) return;
+    setOptionsError(null);
+    const payload = buildOptionGroupsPayload();
+    if (!payload) return;
+    setSavingOptions(true);
+    try {
+      await api.productsSaveOptionGroups(token, editingId, payload);
+      refresh();
+    } catch (e) {
+      setOptionsError(e instanceof Error ? e.message : "Error al guardar las opciones");
+    } finally {
+      setSavingOptions(false);
     }
   };
 
@@ -145,12 +287,6 @@ export function AdminProducts() {
               <input type="number" min="0" step="1" value={form.price} onChange={e => setForm(f => ({ ...f, price: e.target.value }))}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm font-mono" />
             </div>
-            <div>
-              <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Imagen (URL)</label>
-              <input type="text" value={form.image} onChange={e => setForm(f => ({ ...f, image: e.target.value }))}
-                placeholder="https://…"
-                className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm" />
-            </div>
             <div className="sm:col-span-2">
               <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Descripción</label>
               <textarea value={form.description} onChange={e => setForm(f => ({ ...f, description: e.target.value }))} rows={2}
@@ -181,6 +317,110 @@ export function AdminProducts() {
               Cancelar
             </button>
           </div>
+
+          {editingId === null ? (
+            <p className="text-xs text-muted-foreground mt-4 italic">Guardá el producto para poder cargarle fotos y opciones (sabor, agregados, etc.).</p>
+          ) : editingProduct && (
+            <>
+              {/* ── Fotos ── */}
+              <div className="mt-6 pt-5 border-t border-border">
+                <p className="text-sm font-semibold mb-3">Fotos</p>
+                <div className="flex flex-wrap gap-3 mb-3">
+                  {editingProduct.images.map((img, i) => (
+                    <div key={img.id} className="relative w-24 h-24 rounded-xl overflow-hidden border border-border group">
+                      <img src={img.url} alt="" className="w-full h-full object-cover" />
+                      <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1">
+                        <div className="flex gap-1">
+                          <button onClick={() => handleMoveImage(i, -1)} disabled={i === 0} title="Mover antes" className="p-1 bg-white/90 rounded disabled:opacity-30"><ChevronUp size={12} /></button>
+                          <button onClick={() => handleMoveImage(i, 1)} disabled={i === editingProduct.images.length - 1} title="Mover después" className="p-1 bg-white/90 rounded disabled:opacity-30"><ChevronDown size={12} /></button>
+                        </div>
+                        <button onClick={() => handleDeleteImage(img.id)} title="Borrar foto" className="p-1 bg-white/90 rounded text-destructive"><Trash2 size={12} /></button>
+                      </div>
+                    </div>
+                  ))}
+                  <label className="w-24 h-24 rounded-xl border-2 border-dashed border-border flex flex-col items-center justify-center gap-1 text-muted-foreground cursor-pointer hover:border-primary/50 hover:text-primary transition-colors text-xs">
+                    <Upload size={16} />
+                    {uploading ? "Subiendo…" : "Subir"}
+                    <input type="file" accept="image/*" className="hidden" disabled={uploading}
+                      onChange={e => { const file = e.target.files?.[0]; if (file) handleUpload(file); e.target.value = ""; }} />
+                  </label>
+                </div>
+                {imagesError && <p className="text-sm text-red-600">{imagesError}</p>}
+              </div>
+
+              {/* ── Opciones del producto ── */}
+              <div className="mt-6 pt-5 border-t border-border">
+                <div className="flex items-center justify-between mb-3">
+                  <p className="text-sm font-semibold">Opciones del producto</p>
+                  <button onClick={addGroup} className="text-xs flex items-center gap-1 text-primary font-semibold hover:underline">
+                    <Plus size={13} /> Agregar grupo
+                  </button>
+                </div>
+                <div className="space-y-4">
+                  {optionGroups.map((group, gi) => (
+                    <div key={gi} className="border border-border rounded-xl p-3.5">
+                      <div className="flex items-start gap-2 mb-3">
+                        <input type="text" value={group.name} onChange={e => updateGroup(gi, { name: e.target.value })}
+                          placeholder="Nombre del grupo (ej. Sabor)"
+                          className="flex-1 px-2.5 py-1.5 border border-border rounded-lg bg-background text-sm font-medium" />
+                        <div className="flex gap-1 shrink-0">
+                          <button onClick={() => moveGroup(gi, -1)} disabled={gi === 0} className="p-1.5 rounded-lg border border-border disabled:opacity-30"><ChevronUp size={13} /></button>
+                          <button onClick={() => moveGroup(gi, 1)} disabled={gi === optionGroups.length - 1} className="p-1.5 rounded-lg border border-border disabled:opacity-30"><ChevronDown size={13} /></button>
+                          <button onClick={() => removeGroup(gi)} className="p-1.5 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 hover:text-red-600"><Trash2 size={13} /></button>
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-3 mb-3">
+                        <select value={group.selectionType} onChange={e => updateGroup(gi, { selectionType: e.target.value as SelectionType })}
+                          className="px-2.5 py-1.5 border border-border rounded-lg bg-background text-xs">
+                          {(Object.keys(SELECTION_TYPE_LABELS) as SelectionType[]).map(t => (
+                            <option key={t} value={t}>{SELECTION_TYPE_LABELS[t]}</option>
+                          ))}
+                        </select>
+                        {group.selectionType === "quantity" ? (
+                          <label className="flex items-center gap-1.5 text-xs">
+                            Total a repartir:
+                            <input type="number" min="1" step="1" value={group.quantityTarget} onChange={e => updateGroup(gi, { quantityTarget: e.target.value })}
+                              className="w-16 px-2 py-1 border border-border rounded-lg bg-background text-xs font-mono" />
+                          </label>
+                        ) : (
+                          <label className="flex items-center gap-1.5 text-xs">
+                            <input type="checkbox" checked={group.required} onChange={e => updateGroup(gi, { required: e.target.checked })} className="accent-primary" />
+                            Obligatorio
+                          </label>
+                        )}
+                      </div>
+
+                      <div className="space-y-1.5 mb-2">
+                        {group.options.map((opt, oi) => (
+                          <div key={oi} className="flex items-center gap-2">
+                            <input type="text" value={opt.name} onChange={e => updateOption(gi, oi, { name: e.target.value })}
+                              placeholder="Opción (ej. Napolitana)"
+                              className="flex-1 px-2.5 py-1.5 border border-border rounded-lg bg-background text-sm" />
+                            <input type="number" step="1" value={opt.priceDelta} onChange={e => updateOption(gi, oi, { priceDelta: e.target.value })}
+                              placeholder="+$"
+                              className="w-24 px-2.5 py-1.5 border border-border rounded-lg bg-background text-sm font-mono" />
+                            <button onClick={() => removeOption(gi, oi)} className="p-1.5 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 hover:text-red-600 shrink-0"><Trash2 size={13} /></button>
+                          </div>
+                        ))}
+                      </div>
+                      <button onClick={() => addOption(gi)} className="text-xs flex items-center gap-1 text-primary font-semibold hover:underline">
+                        <Plus size={12} /> Agregar opción
+                      </button>
+                    </div>
+                  ))}
+                  {optionGroups.length === 0 && (
+                    <p className="text-xs text-muted-foreground italic">Sin opciones configuradas — este producto se agrega directo al carrito, sin selección previa.</p>
+                  )}
+                </div>
+                {optionsError && <p className="text-sm text-red-600 mt-3">{optionsError}</p>}
+                <button onClick={handleSaveOptions} disabled={savingOptions}
+                  className="mt-3 bg-secondary text-foreground border border-border px-4 py-2 rounded-xl font-semibold text-sm hover:bg-secondary/70 transition-colors disabled:opacity-40">
+                  {savingOptions ? "Guardando opciones…" : "Guardar opciones"}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       )}
 

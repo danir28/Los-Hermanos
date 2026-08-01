@@ -3,15 +3,20 @@ import { ShoppingCart, Search, Plus } from "lucide-react";
 import type { CartItem, Product } from "../types";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
+import { ImageCarousel, ProductOptionsModal } from "../components/shared";
 
 // Pantalla de menú del cliente: filtro por categoría, búsqueda y agregado de productos al carrito.
 // initialCategory (default "Todos") deja que quien navega hasta acá — hoy, las tarjetas de
 // categoría destacada de CustomerHome — abra el menú ya filtrado, en vez de arrancar siempre en
 // el catálogo completo.
-export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = "Todos" }: { cart: CartItem[]; onAddToCart: (p: Product) => void; onNavigate: (v: string) => void; initialCategory?: string }) {
+export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = "Todos" }: { cart: CartItem[]; onAddToCart: (line: CartItem) => void; onNavigate: (v: string) => void; initialCategory?: string }) {
   const { products, categories } = useProducts();
   const [category, setCategory] = useState(initialCategory);
   const [search, setSearch] = useState("");
+  // Producto que está resolviendo sus opciones (sabor, agregados, etc.) en el modal — null
+  // cuando no hay ninguno abierto. Solo se abre para productos con optionGroups; los que no
+  // tienen se agregan directo con un solo click, como siempre.
+  const [configuring, setConfiguring] = useState<Product | null>(null);
 
   const filtered = products.filter(p => {
     if (!p.active) return false;
@@ -50,13 +55,18 @@ export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = 
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
         {filtered.map(product => {
-          const inCart = cart.find(i => i.id === product.id);
+          const hasOptions = product.optionGroups.length > 0;
+          const inCart = !hasOptions && cart.find(i => i.id === String(product.id));
           return (
             <div key={product.id} className={`bg-card border rounded-2xl overflow-hidden transition-all ${product.outOfStock ? "border-border opacity-70" : "border-border hover:shadow-lg"}`}>
               <div className="h-48 overflow-hidden bg-muted relative">
-                <img src={product.image} alt={product.name} className={`w-full h-full object-cover ${product.outOfStock ? "grayscale" : ""}`} />
+                <ImageCarousel
+                  urls={product.images.map(img => img.url)}
+                  alt={product.name}
+                  className={`w-full h-full ${product.outOfStock ? "grayscale" : ""}`}
+                />
                 {product.outOfStock && (
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
                     <span className="bg-white text-gray-800 font-bold text-sm px-4 py-1.5 rounded-full shadow">Sin stock</span>
                   </div>
                 )}
@@ -69,8 +79,13 @@ export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = 
                   <span className="font-display font-bold text-primary text-2xl">{formatCurrency(product.price)}</span>
                   {product.outOfStock ? (
                     <span className="text-xs text-muted-foreground border border-border px-3 py-2 rounded-xl">No disponible</span>
+                  ) : hasOptions ? (
+                    <button onClick={() => setConfiguring(product)}
+                      className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground">
+                      <Plus size={15} /> Elegir opciones
+                    </button>
                   ) : (
-                    <button onClick={() => onAddToCart(product)}
+                    <button onClick={() => onAddToCart({ id: String(product.id), productId: product.id, name: product.name, price: product.price, qty: 1, image: product.images[0]?.url ?? "" })}
                       className={`flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all ${inCart ? "bg-primary text-primary-foreground shadow-md" : "bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground"}`}>
                       <Plus size={15} />
                       {inCart ? `(${inCart.qty}) Agregar más` : "Agregar"}
@@ -82,6 +97,14 @@ export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = 
           );
         })}
       </div>
+
+      {configuring && (
+        <ProductOptionsModal
+          product={configuring}
+          onClose={() => setConfiguring(null)}
+          onConfirm={line => { onAddToCart(line); setConfiguring(null); }}
+        />
+      )}
     </div>
   );
 }

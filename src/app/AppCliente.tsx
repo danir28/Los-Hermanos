@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { ShoppingCart } from "lucide-react";
-import type { CartItem, Order, OrderType, Product } from "./types";
+import type { CartItem, Order, OrderType } from "./types";
 import { api, type BusinessHours } from "./lib/api";
 import { CustomerHome, CustomerMenu, CustomerMenuReadOnly, CustomerCart, CustomerConfirmation, CustomerTracking } from "./cliente";
 import logo from "../assets/logo.png";
@@ -59,15 +59,19 @@ export default function AppCliente() {
     refreshBusinessHours();
   };
 
-  // Agrega un producto al carrito: si ya estaba, suma 1 a la cantidad existente en vez de duplicar la línea.
-  const addToCart = (product: Product) => setCart(prev => {
-    const ex = prev.find(i => i.id === product.id);
-    if (ex) return prev.map(i => i.id === product.id ? { ...i, qty: i.qty + 1 } : i);
-    return [...prev, { id: product.id, name: product.name, price: product.price, qty: 1, image: product.image }];
+  // Agrega una línea ya resuelta al carrito (CustomerMenu la arma directo para un producto sin
+  // opciones, o vía ProductOptionsModal si tiene). Si ya existe una línea con ese mismo id
+  // (siempre el caso para productos sin opciones — ver CartItem en types.ts), suma 1 a su
+  // cantidad en vez de duplicarla; una línea de un producto configurado siempre trae un id
+  // nuevo, así que queda como línea propia.
+  const addToCart = (line: CartItem) => setCart(prev => {
+    const ex = prev.find(i => i.id === line.id);
+    if (ex) return prev.map(i => i.id === line.id ? { ...i, qty: i.qty + line.qty } : i);
+    return [...prev, line];
   });
 
-  // Suma/resta delta a la cantidad de un ítem del carrito y lo quita por completo si llega a 0.
-  const updateCart = (id: number, delta: number) => setCart(prev =>
+  // Suma/resta delta a la cantidad de una línea del carrito y la quita por completo si llega a 0.
+  const updateCart = (id: string, delta: number) => setCart(prev =>
     prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
   );
 

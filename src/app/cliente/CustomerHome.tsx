@@ -122,7 +122,7 @@ export function CustomerHome({ onNavigate, businessHours }: { onNavigate: (v: st
           {featured.map(product => (
             <div key={product.id} className="group bg-card border border-border rounded-2xl overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
               <div className="h-44 overflow-hidden bg-muted">
-                <img src={product.image} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                <img src={product.images[0]?.url} alt={product.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
               </div>
               <div className="p-4">
                 <p className="font-mono text-[10px] text-muted-foreground uppercase tracking-widest mb-1">{product.category}</p>

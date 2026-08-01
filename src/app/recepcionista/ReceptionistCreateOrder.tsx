@@ -3,7 +3,7 @@ import { Search, CheckCircle, Plus, Minus, X } from "lucide-react";
 import type { CartItem, OrderType, Product } from "../types";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
-import { ConfirmDialog, SlotPicker } from "../components/shared";
+import { ConfirmDialog, ProductOptionsModal, SlotPicker } from "../components/shared";
 
 // Datos del pedido que arma este formulario, para que AppStaff.tsx lo cree en el estado
 // compartido de orders. estimatedTime es obligatorio (todo pedido nace "Programado" con un
@@ -25,6 +25,8 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
   const [category, setCategory] = useState("Todos");
   const [confirmed, setConfirmed] = useState(false);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  // Producto que está resolviendo sus opciones en el modal — mismo criterio que CustomerMenu.
+  const [configuring, setConfiguring] = useState<Product | null>(null);
 
   const filtered = products.filter(p => {
     if (!p.active || p.outOfStock) return false;
@@ -33,15 +35,21 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
     return true;
   });
 
-  // Agrega un producto al pedido en carga: si ya estaba, suma 1 a la cantidad existente en vez de duplicar la línea.
-  const addItem = (p: Product) => setOrderCart(prev => {
-    const ex = prev.find(i => i.id === p.id);
-    if (ex) return prev.map(i => i.id === p.id ? { ...i, qty: i.qty + 1 } : i);
-    return [...prev, { id: p.id, name: p.name, price: p.price, qty: 1, image: p.image }];
+  // Agrega una línea ya resuelta al pedido en carga: si ya existe una línea con ese mismo id
+  // (siempre el caso para productos sin opciones), suma cantidad en vez de duplicarla — mismo
+  // criterio que addToCart en AppCliente.tsx.
+  const addLine = (line: CartItem) => setOrderCart(prev => {
+    const ex = prev.find(i => i.id === line.id);
+    if (ex) return prev.map(i => i.id === line.id ? { ...i, qty: i.qty + line.qty } : i);
+    return [...prev, line];
   });
 
-  // Suma/resta delta a la cantidad de un ítem y lo quita del pedido si llega a 0.
-  const updateQty = (id: number, delta: number) => setOrderCart(prev =>
+  // Agrega un producto sin opciones directo, con cantidad 1 — atajo para el click único del
+  // catálogo; los productos con optionGroups pasan por el modal (ver "configuring" más abajo).
+  const addItem = (p: Product) => addLine({ id: String(p.id), productId: p.id, name: p.name, price: p.price, qty: 1, image: p.images[0]?.url ?? "" });
+
+  // Suma/resta delta a la cantidad de una línea y la quita del pedido si llega a 0.
+  const updateQty = (id: string, delta: number) => setOrderCart(prev =>
     prev.map(i => i.id === id ? { ...i, qty: i.qty + delta } : i).filter(i => i.qty > 0)
   );
 
@@ -113,11 +121,12 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
             {filtered.map(p => {
-              const inCart = orderCart.find(i => i.id === p.id);
+              const hasOptions = p.optionGroups.length > 0;
+              const inCart = !hasOptions && orderCart.find(i => i.id === String(p.id));
               return (
                 <div key={p.id} className={`bg-card border rounded-xl p-3 flex gap-3 items-center transition-all ${inCart ? "border-primary/40 bg-primary/5" : "border-border hover:border-primary/30"}`}>
                   <div className="w-14 h-14 rounded-lg overflow-hidden bg-muted shrink-0">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover" />
+                    <img src={p.images[0]?.url} alt={p.name} className="w-full h-full object-cover" />
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-sm leading-tight">{p.name}</p>
@@ -125,16 +134,16 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
                   </div>
                   {inCart ? (
                     <div className="flex items-center gap-1 shrink-0">
-                      <button onClick={() => updateQty(p.id, -1)} data-testid={`qty-decrease-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
+                      <button onClick={() => updateQty(String(p.id), -1)} data-testid={`qty-decrease-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
                         <Minus size={11} />
                       </button>
                       <span className="w-5 text-center font-mono font-bold text-sm">{inCart.qty}</span>
-                      <button onClick={() => updateQty(p.id, 1)} data-testid={`qty-increase-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
+                      <button onClick={() => updateQty(String(p.id), 1)} data-testid={`qty-increase-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
                         <Plus size={11} />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => addItem(p)} data-testid={`add-product-${p.id}`} className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors shrink-0">
+                    <button onClick={() => hasOptions ? setConfiguring(p) : addItem(p)} data-testid={`add-product-${p.id}`} className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors shrink-0">
                       <Plus size={15} />
                     </button>
                   )}
@@ -209,6 +218,14 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
           )}
         </div>
       </div>
+
+      {configuring && (
+        <ProductOptionsModal
+          product={configuring}
+          onClose={() => setConfiguring(null)}
+          onConfirm={line => { addLine(line); setConfiguring(null); }}
+        />
+      )}
     </div>
   );
 }
