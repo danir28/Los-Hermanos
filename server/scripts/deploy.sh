@@ -35,7 +35,15 @@ fi
 
 echo "$(date -u +%FT%TZ) — commit nuevo detectado (${LOCAL_SHA:0:7} -> ${REMOTE_SHA:0:7}), desplegando"
 
-git pull origin main
+# git reset --hard en vez de git pull a propósito: este checkout es solo para deploy, nadie
+# edita nada acá a mano, así que cualquier diferencia local (ej. package-lock.json regenerado
+# distinto por "npm install" más abajo, según la versión de npm/plataforma del droplet) tiene
+# que descartarse sin preguntar, nunca bloquear el deploy. git pull (merge) sí se niega a pisar
+# cambios locales no commiteados — eso fue justo lo que trabó el cron en un loop de fallos el
+# 1/8/2026 (ver ERRORS en CLAUDE.md), cada 5 min durante casi una hora, con el backend
+# desactualizado sirviendo un catálogo de productos con un shape viejo mientras el frontend
+# nuevo (ya en Netlify) esperaba el nuevo — de ahí la pantalla en blanco que reportó el cliente.
+git reset --hard "$REMOTE_SHA"
 
 cd "$REPO_DIR/server"
 npm install

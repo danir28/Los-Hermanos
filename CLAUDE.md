@@ -191,6 +191,34 @@ Para agregar una columna `NOT NULL` a una tabla con filas existentes (imposible 
 
 Este mismo archivo decía (línea de `db:generate` en "Commands") que el cliente se regenera automáticamente después de `db:migrate`. En la práctica, al agregar el modelo `User` (Sprint 1, autenticación) y correr `npm run db:migrate --prefix server`, la migración se aplicó bien pero `server/src/generated/prisma` quedó con el snapshot viejo — `npm run typecheck --prefix server` tiraba `Module '"../generated/prisma/client.js"' has no exported member 'User'` y `Property 'user' does not exist on type 'PrismaClient'`. Se resolvió corriendo `npm run db:generate --prefix server` a mano después de la migración. Moraleja: después de cualquier `db:migrate` que agregue/cambie un modelo, correr `db:generate` explícitamente antes de asumir que el Client ya está al día — no confiar en que se disparó solo.
 
+### El cron de auto-deploy se trabó en loop por drift de `package-lock.json`
+
+El 1/8/2026, al mergear a `main` la rama con el carrusel de fotos/opciones de producto (ver
+migraciones `add_product_images`/`add_product_options`) más lo de esta sesión, el cliente
+reportó pantalla en blanco al entrar a "Menú" (cliente) y "Nuevo pedido" (cocina) — ambas
+pantallas usan `useProducts()` y hacen `product.optionGroups.length` apenas cargan el catálogo.
+Causa real: `server/scripts/deploy.sh` usaba `git pull origin main`, y el `npm install` de cada
+corrida anterior regeneraba `server/package-lock.json` con pequeñas diferencias respecto al
+commiteado (versión de npm/plataforma del droplet vs. la que generó el lockfile), dejando el
+working tree del droplet sucio. Como el commit nuevo también tocaba ese archivo, `git pull`
+(es un merge) se negó a pisar el cambio local no commiteado y abortó — en loop, cada 5 min,
+durante casi una hora (`/var/log/los-hermanos-deploy.log`, 17:45 a 18:30 UTC), sin que nada lo
+frenara porque el script no distingue "conflicto real" de "drift de un build artifact". El
+backend quedó 3 commits atrás, sirviendo productos con el shape viejo (`image` string) mientras
+el frontend (Netlify, deploy independiente y mucho más rápido) ya esperaba `images`/
+`optionGroups` — de ahí el `undefined.length` y la pantalla en blanco (no hay Error Boundary).
+Se resolvió en dos partes: (1) en el droplet, `git checkout -- server/package-lock.json` +
+correr `deploy.sh` a mano para destrabar ya; (2) en el script, cambiar `git pull origin main`
+por `git reset --hard "$REMOTE_SHA"` — este checkout es solo para deploy (nadie edita nada ahí
+a mano), así que cualquier drift local tiene que descartarse siempre, nunca bloquear. Moraleja:
+un pipeline de auto-deploy que hace `npm install` en el propio checkout de git no puede usar
+`git pull` para traer el commit nuevo — el lockfile (o cualquier archivo que el install toque)
+va a driftear tarde o temprano y trabar el merge. `git reset --hard` contra el SHA remoto es lo
+correcto ahí. También: la ventana de "Netlify ya deployeó, el droplet todavía no" (hasta 5 min,
+peor caso) puede producir mismatches de shape API real entre frontend y backend — tenerlo en
+cuenta antes de asumir que un error recién reportado después de un merge a main es un bug de
+código y no un problema de deploy en curso.
+
 ### El flujo manual de migración (sin TTY) solo tocó la base de dev, no la de test
 
 Al agregar `OrderItem.notes` (aclaraciones por ítem, 1/8/2026) se siguió el flujo manual de migración de más arriba (`migration.sql` a mano + `psql` + `prisma migrate resolve --applied` + `db:generate`), pero ese `psql`/`migrate resolve` se corrió solo contra `DATABASE_URL` de `server/.env` (la base de **desarrollo**, `los_hermanos`). Quedó sin aplicar contra `los_hermanos_test` (`server/.env.test`), que es la que usa `npm test --prefix server`. No se notó en el momento porque en esa sesión no se corrió la suite de tests del backend, solo `typecheck` — recién se descubrió sesiones después, al correr `npm test --prefix server` completo, con 9 tests de `orders/service.test.ts` fallando con `The column "notes" of relation "order_items" does not exist in the current database`. Se resolvió repitiendo el mismo `psql -f migration.sql` y `prisma migrate resolve --applied <nombre>` contra `los_hermanos_test`, pasando `DATABASE_URL` de esa base explícitamente en el comando (ya que el `.env` por defecto que lee el CLI de Prisma es el de dev). Moraleja: cualquier migración manual (sin TTY) tiene que aplicarse a **las dos bases** (`los_hermanos` y `los_hermanos_test`), no solo a la de dev — y conviene correr `npm test --prefix server` (no solo `typecheck`) después de una migración nueva, antes de dar la tarea por terminada, para no arrastrar este tipo de desfasaje a una sesión futura.
