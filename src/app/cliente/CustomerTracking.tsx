@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Search, Clock, CheckCircle, Phone, User, ClipboardList, Check, AlertCircle, Ban } from "lucide-react";
 import type { Order, OrderStatus } from "../types";
-import { STATUS } from "../data/statusConfig";
+import { STATUS, CAN_CANCEL } from "../data/statusConfig";
 import { StatusBadge, TypePill } from "../components/shared";
 import { STATUS_MESSAGES } from "./statusMessages";
 import { api } from "../lib/api";
@@ -142,6 +142,21 @@ export function CustomerTracking({ preloadOrder }: { preloadOrder?: Order }) {
           {order.status === "Cancelado" ? <Ban size={15} className="shrink-0 mt-0.5 text-red-600" /> : <CheckCircle size={15} className="shrink-0 mt-0.5 text-primary" />}
           <span>{STATUS_MESSAGES[order.status]}</span>
         </div>
+
+        {/* Cancelar: no hay botón de autocancelación desde acá — el cliente tiene que llamar
+            (el teléfono lo atiende cocina, ver KitchenPanel) para que alguien confirme antes de
+            cancelar. Solo se ofrece mientras el pedido todavía se puede cancelar (CAN_CANCEL,
+            hoy "Programado" nomás): una vez que cocina ya empezó a prepararlo no tiene sentido
+            seguir invitando a llamar para cancelarlo. */}
+        {CAN_CANCEL.includes(order.status) && (
+          <div className="mt-3 p-3.5 bg-amber-50 border border-amber-200 rounded-xl text-sm text-amber-800 flex items-center justify-between gap-3 flex-wrap">
+            <span>¿Necesitás cancelar tu pedido? Llamanos.</span>
+            <a href={`tel:${BUSINESS_PHONE_TEL}`}
+              className="flex items-center gap-1.5 bg-white border border-amber-300 text-amber-800 px-3.5 py-2 rounded-lg font-semibold text-xs hover:bg-amber-100 transition-colors shrink-0">
+              <Phone size={13} /> Llamar al {BUSINESS_PHONE_DISPLAY}
+            </a>
+          </div>
+        )}
       </div>
 
       {/* Timeline (only for non-cancelled) */}

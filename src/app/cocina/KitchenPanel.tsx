@@ -1,7 +1,9 @@
-import { ChefHat, Clock, Phone, Printer, User } from "lucide-react";
-import type { Order } from "../types";
+import { useState } from "react";
+import { ChefHat, Clock, Phone, Printer, User, X } from "lucide-react";
+import type { Order, OrderStatus } from "../types";
 import { formatCurrency } from "../lib/format";
-import { StatusBadge, TypePill } from "../components/shared";
+import { StatusBadge, TypePill, ConfirmDialog } from "../components/shared";
+import { CAN_CANCEL } from "../data/statusConfig";
 import { formatTimeLabel, nowLabel } from "../lib/time";
 import { AgeIndicator } from "./AgeIndicator";
 import { NotificationSetup } from "./NotificationSetup";
@@ -18,7 +20,16 @@ import { NotificationSetup } from "./NotificationSetup";
 // imprimen su comanda automáticamente al crearse (ver createManualOrder en AppStaff.tsx) —
 // un pedido online nunca pasa por esa pantalla, así que es el único caso donde cocina necesita
 // disparar la impresión ella misma, al verlo entrar acá.
-export function KitchenPanel({ orders, token, onGoAssign, onPrint }: { orders: Order[]; token: string; onGoAssign: (id: string) => void; onPrint: (order: Order) => void }) {
+// onUpdateStatus habilita "Cancelar" acá (además de en recepción): el teléfono de la rotisería
+// suena en cocina, así que cuando un cliente llama para cancelar (ver el aviso de
+// CustomerTracking) es cocina quien atiende y tiene que poder cancelarlo sin pasarle el pedido a
+// recepción. Mismo criterio de cuándo se puede cancelar (CAN_CANCEL) y misma confirmación
+// (ConfirmDialog) que ya usa ReceptionistOrders, para no divergir entre roles.
+export function KitchenPanel({ orders, token, onGoAssign, onPrint, onUpdateStatus }: { orders: Order[]; token: string; onGoAssign: (id: string) => void; onPrint: (order: Order) => void; onUpdateStatus: (id: string, status: OrderStatus) => void }) {
+  // Se guarda el pedido completo (no solo el id), igual que en ReceptionistOrders, porque el
+  // diálogo necesita mostrar el número visible (orderNumber) además de mandar el id real.
+  const [cancelTarget, setCancelTarget] = useState<Order | null>(null);
+
   // Sin horario primero (necesitan atención humana), después ascendente por horario de retiro
   // — si a las 19:20 hay un pedido y a las 19:30 otro, el de 19:20 aparece arriba.
   const sorted = [...orders].sort((a, b) => {
@@ -107,12 +118,28 @@ export function KitchenPanel({ orders, token, onGoAssign, onPrint }: { orders: O
                       {order.estimatedTime ? "Reprogramar" : "Asignar horario"}
                     </button>
                   )}
+                  {CAN_CANCEL.includes(order.status) && (
+                    <button onClick={() => setCancelTarget(order)} data-testid={`cancel-order-${order.id}`}
+                      className="flex items-center gap-1 text-xs text-destructive border border-red-200 bg-red-50 hover:bg-red-100 px-4 py-2 rounded-xl transition-colors font-semibold">
+                      <X size={13} /> Cancelar
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
           );
         })}
       </div>
+
+      {cancelTarget && (
+        <ConfirmDialog
+          title="¿Cancelar pedido?"
+          description={`Se cancelará el pedido #${cancelTarget.orderNumber}. Esta acción no se puede deshacer.`}
+          confirmLabel="Sí, cancelar"
+          onCancel={() => setCancelTarget(null)}
+          onConfirm={() => { onUpdateStatus(cancelTarget.id, "Cancelado"); setCancelTarget(null); }}
+        />
+      )}
     </div>
   );
 }
