@@ -20,9 +20,12 @@ export function OrderTicket({ order }: { order: Order }) {
       <p>Retiro: {order.estimatedTime ? formatTimeLabel(order.estimatedTime) : "A confirmar"}</p>
       <hr />
       {order.items.map((item, i) => (
-        <div key={i} className="order-ticket-line">
-          <span>{item.qty}× {item.name}</span>
-          <span>{formatCurrency(item.price * item.qty)}</span>
+        <div key={i}>
+          <div className="order-ticket-line">
+            <span>{item.qty}× {item.name}</span>
+            <span>{formatCurrency(item.price * item.qty)}</span>
+          </div>
+          {item.notes && <p className="order-ticket-note">  * {item.notes}</p>}
         </div>
       ))}
       <hr />

@@ -54,6 +54,16 @@
     gap: 8px;
   }
 
+  /* Aclaración del ítem (ej. "sin tomate"). font-weight normal (el resto del ticket es todo
+     bold) es lo único confiable para diferenciarla en una impresora térmica monocromo — no hay
+     color ni tamaño de sobra en 80mm, así que el contraste de peso + el prefijo "*" del texto
+     (ver OrderTicket.tsx) son la única señal visual de que es una excepción, no un ítem más. */
+  .order-ticket-note {
+    font-weight: normal;
+    font-style: italic;
+    margin: 0 0 2px 0;
+  }
+
   .order-ticket-total {
     font-weight: bold;
     margin-top: 6px;
