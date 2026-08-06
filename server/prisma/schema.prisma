@@ -140,6 +140,14 @@ model Product {
   featured    Boolean  @default(false)
   active      Boolean  @default(true)
   outOfStock  Boolean  @default(false)
+  // Si es true, este producto puede aparecer como opción calculada dentro de OTRO producto que
+  // tenga un ProductOptionGroup con sourceCategory = esta misma category (ver ese campo más abajo)
+  // — ej. cada sabor de empanada individual lo tiene en true para poder aparecer como opción de
+  // "Empanadas (docena)"/"(media docena)", pero los productos "contenedor" (la docena/media docena
+  // en sí, o "Pizza Super" que se vende aparte de "Mitad pizza") lo dejan en false para no
+  // ofrecerse a sí mismos como si fueran un sabor. Default false porque la mayoría del catálogo
+  // no participa de ningún grupo dinámico.
+  offerAsOption Boolean @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
@@ -160,6 +168,16 @@ model Product {
 // "Empanadas (docena)"). Se reemplaza el set completo de grupos de un producto en cada guardado
 // desde el admin (ver replaceOptionGroups en products/service.ts) — no hay edición incremental,
 // mismo patrón "reemplazo completo" que ya usa BusinessHours/SlotWindow con PUT.
+//
+// sourceCategory (agregado 6/8/2026) activa el modo "vinculado a categoría": si tiene un valor
+// (ej. "Empanadas"), las opciones de este grupo NO son las filas guardadas en `options` — se
+// calculan en el momento a partir de la tabla Product (categoría = sourceCategory, active=true,
+// outOfStock=false, offerAsOption=true), ver resolveGroupOptions en products/service.ts. Así un
+// sabor nuevo (o sin stock) se refleja solo en "Empanadas (docena)"/"Mitad pizza" sin editarlas a
+// mano, y sin duplicar la lista de sabores en cada producto contenedor. Si sourceCategory es null
+// (el caso de "Agregados → Papas fritas" en el sandwich, por ejemplo), el grupo sigue funcionando
+// como siempre: opciones tipeadas a mano en `options`. Un grupo dinámico igual puede tener filas
+// en `options` a nivel de base, pero el admin las deja vacías — se ignoran en el cálculo.
 model ProductOptionGroup {
   id             Int             @id @default(autoincrement())
   productId      Int
@@ -168,6 +186,7 @@ model ProductOptionGroup {
   selectionType  String
   required       Boolean         @default(false)
   quantityTarget Int?
+  sourceCategory String?
   sortOrder      Int             @default(0)
   options        ProductOption[]
 

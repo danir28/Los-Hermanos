@@ -128,18 +128,22 @@ export type CreateProductInput = {
   featured: boolean;
   active: boolean;
   outOfStock: boolean;
+  offerAsOption: boolean;
 };
 export type UpdateProductInput = Partial<CreateProductInput>;
 
 // Payload para reemplazar el set completo de grupos de opciones de un producto (ver
 // server/src/products/types.ts#CreateOptionGroupInput) — mismo shape sin id (se generan en el
-// backend al crearlos).
+// backend al crearlos). sourceCategory: null para un grupo manual (options tipeadas a mano); un
+// string no vacío para un grupo dinámico (en ese caso options tiene que ir vacío — el backend lo
+// rechaza si no).
 export type UpsertOptionInput = { name: string; priceDelta: number; sortOrder: number };
 export type UpsertOptionGroupInput = {
   name: string;
   selectionType: SelectionType;
   required: boolean;
   quantityTarget: number | null;
+  sourceCategory: string | null;
   sortOrder: number;
   options: UpsertOptionInput[];
 };

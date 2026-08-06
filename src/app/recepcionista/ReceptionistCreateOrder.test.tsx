@@ -7,7 +7,7 @@ import { ReceptionistCreateOrder } from "./ReceptionistCreateOrder";
 
 const PRODUCT: Product = {
   id: 1, name: "Empanada de carne", category: "Empanadas", price: 1500,
-  description: "", images: [], optionGroups: [], featured: false, active: true, outOfStock: false,
+  description: "", images: [], optionGroups: [], featured: false, active: true, outOfStock: false, offerAsOption: false,
 };
 
 afterEach(() => {

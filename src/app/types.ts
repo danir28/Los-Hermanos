@@ -51,6 +51,12 @@ export type ProductOptionGroup = {
   selectionType: SelectionType;
   required: boolean;
   quantityTarget: number | null;
+  // Si no es null (ej. "Empanadas"), `options` ya viene calculado por el backend a partir del
+  // catálogo (productos activos, con stock y offerAsOption=true de esa categoría) en vez de ser
+  // una lista tipeada a mano — ver server/src/products/service.ts#resolveGroupOptions. El carrito
+  // y ProductOptionsModal no necesitan tratarlo distinto: `options` ya llega resuelto igual sea
+  // cual sea el origen. Solo lo usa AdminProducts para saber en qué modo mostrar el editor.
+  sourceCategory: string | null;
   sortOrder: number;
   options: ProductOption[];
 };
@@ -58,7 +64,10 @@ export type ProductOptionGroup = {
 // Producto del catálogo de la rotisería. images reemplaza el viejo campo `image: string` único
 // (carrusel de fotos); optionGroups son las variantes configurables (sabor, agregados, etc.) que
 // hay que resolver antes de agregarlo al carrito cuando no está vacío — ver ProductOptionsModal.
-export type Product = { id: number; name: string; category: string; price: number; description: string; images: ProductImage[]; optionGroups: ProductOptionGroup[]; featured: boolean; active: boolean; outOfStock: boolean };
+// offerAsOption: si es true, este producto puede aparecer como opción calculada dentro de un
+// ProductOptionGroup de OTRO producto con sourceCategory = esta category (ej. cada sabor de
+// empanada individual, para poder aparecer en "Empanadas (docena)"/"(media docena)").
+export type Product = { id: number; name: string; category: string; price: number; description: string; images: ProductImage[]; optionGroups: ProductOptionGroup[]; featured: boolean; active: boolean; outOfStock: boolean; offerAsOption: boolean };
 
 // Configuración visual (color, ícono, etiqueta) asociada a cada OrderStatus.
 export type StatusCfg = { dot: string; badge: string; label: string; Icon: any };

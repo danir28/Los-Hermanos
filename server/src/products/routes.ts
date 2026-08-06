@@ -47,6 +47,7 @@ productsRouter.post("/", requireAuth, requireRole("admin"), asyncHandler(async (
     featured: body.featured ?? false,
     active: body.active ?? true,
     outOfStock: body.outOfStock ?? false,
+    offerAsOption: body.offerAsOption ?? false,
   });
   res.json(product);
 }));
@@ -156,7 +157,11 @@ productsRouter.patch("/:id/images/reorder", requireAuth, requireRole("admin"), a
 
 // Valida el body de PUT /:id/option-groups: array de grupos, cada uno con su tipo de selección
 // válido y sus opciones anidadas. quantityTarget es obligatorio (>0) para selectionType
-// "quantity" y se ignora (se guarda null) para los otros dos tipos.
+// "quantity" y se ignora (se guarda null) para los otros dos tipos. sourceCategory (opcional) es
+// null/ausente para un grupo manual, o un string no vacío para un grupo dinámico (ver
+// ProductOptionGroup.sourceCategory en schema.prisma) — en ese caso `options` tiene que venir
+// vacío: las opciones se calculan solas, no tiene sentido que el admin tipee algo que se va a
+// ignorar al leer el producto.
 function parseOptionGroups(body: unknown): CreateOptionGroupInput[] | null {
   if (!Array.isArray(body)) return null;
   const groups: CreateOptionGroupInput[] = [];
@@ -167,6 +172,13 @@ function parseOptionGroups(body: unknown): CreateOptionGroupInput[] | null {
     if (!isSelectionType(g.selectionType)) return null;
     if (!Array.isArray(g.options)) return null;
     if (g.selectionType === "quantity" && !(Number.isInteger(g.quantityTarget) && (g.quantityTarget as number) > 0)) return null;
+
+    let sourceCategory: string | null = null;
+    if (g.sourceCategory !== undefined && g.sourceCategory !== null) {
+      if (typeof g.sourceCategory !== "string" || !g.sourceCategory.trim()) return null;
+      sourceCategory = g.sourceCategory.trim();
+    }
+    if (sourceCategory !== null && g.options.length > 0) return null;
 
     const options = [];
     for (const rawOpt of g.options) {
@@ -182,6 +194,7 @@ function parseOptionGroups(body: unknown): CreateOptionGroupInput[] | null {
       selectionType: g.selectionType,
       required: Boolean(g.required),
       quantityTarget: g.selectionType === "quantity" ? (g.quantityTarget as number) : null,
+      sourceCategory,
       sortOrder: groups.length,
       options,
     });

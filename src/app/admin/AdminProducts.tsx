@@ -10,19 +10,21 @@ import { ConfirmDialog } from "../components/shared";
 // Formulario vacío para dar de alta un producto nuevo — los booleans arrancan en los mismos
 // defaults que ya usaba el array hardcodeado (activo sí, destacado/sin stock no). Ya no incluye
 // "image": las fotos se cargan aparte, una vez que el producto existe (ver sección Fotos).
-const EMPTY_FORM = { name: "", category: "", price: "", description: "", featured: false, active: true, outOfStock: false };
+const EMPTY_FORM = { name: "", category: "", price: "", description: "", featured: false, active: true, outOfStock: false, offerAsOption: false };
 type FormState = typeof EMPTY_FORM;
 
 function productToForm(p: Product): FormState {
-  return { name: p.name, category: p.category, price: String(p.price), description: p.description, featured: p.featured, active: p.active, outOfStock: p.outOfStock };
+  return { name: p.name, category: p.category, price: String(p.price), description: p.description, featured: p.featured, active: p.active, outOfStock: p.outOfStock, offerAsOption: p.offerAsOption };
 }
 
 // Forma local de un grupo/opción mientras se edita en el sub-formulario de "Opciones del
 // producto" — sin ids (se generan en el backend al guardar) y con quantityTarget/priceDelta como
 // texto, más simple para inputs controlados; se convierten a UpsertOptionGroupInput recién al
-// guardar (ver buildOptionGroupsPayload).
+// guardar (ver buildOptionGroupsPayload). sourceCategory usa "" para representar el modo manual
+// (en vez de null) porque alimenta directo un <select> controlado — se convierte a null recién al
+// armar el payload.
 type LocalOption = { name: string; priceDelta: string };
-type LocalGroup = { name: string; selectionType: SelectionType; required: boolean; quantityTarget: string; options: LocalOption[] };
+type LocalGroup = { name: string; selectionType: SelectionType; required: boolean; quantityTarget: string; sourceCategory: string; options: LocalOption[] };
 
 function groupToLocal(g: ProductOptionGroup): LocalGroup {
   return {
@@ -30,6 +32,7 @@ function groupToLocal(g: ProductOptionGroup): LocalGroup {
     selectionType: g.selectionType,
     required: g.required,
     quantityTarget: g.quantityTarget !== null ? String(g.quantityTarget) : "",
+    sourceCategory: g.sourceCategory ?? "",
     options: g.options.map(o => ({ name: o.name, priceDelta: String(o.priceDelta) })),
   };
 }
@@ -95,7 +98,7 @@ export function AdminProducts() {
     setSaving(true);
     setError(null);
     try {
-      const input = { name: form.name.trim(), category: form.category.trim(), price, description: form.description.trim(), featured: form.featured, active: form.active, outOfStock: form.outOfStock };
+      const input = { name: form.name.trim(), category: form.category.trim(), price, description: form.description.trim(), featured: form.featured, active: form.active, outOfStock: form.outOfStock, offerAsOption: form.offerAsOption };
       if (editingId === null) {
         const created = await api.productsCreate(token, input);
         refresh();
@@ -178,7 +181,7 @@ export function AdminProducts() {
   };
 
   // ── Opciones del producto ─────────────────────────────────────────────
-  const addGroup = () => setOptionGroups(gs => [...gs, { name: "", selectionType: "single", required: false, quantityTarget: "", options: [] }]);
+  const addGroup = () => setOptionGroups(gs => [...gs, { name: "", selectionType: "single", required: false, quantityTarget: "", sourceCategory: "", options: [] }]);
   const updateGroup = (i: number, patch: Partial<LocalGroup>) => setOptionGroups(gs => gs.map((g, idx) => idx === i ? { ...g, ...patch } : g));
   const removeGroup = (i: number) => setOptionGroups(gs => gs.filter((_, idx) => idx !== i));
   const moveGroup = (i: number, dir: -1 | 1) => setOptionGroups(gs => {
@@ -196,11 +199,17 @@ export function AdminProducts() {
 
   // Valida y convierte el estado local (todo en texto, cómodo para inputs) al payload tipado que
   // espera el backend. Devuelve null si algo no es válido, con el motivo en optionsError.
+  // Un grupo "vinculado a categoría" (sourceCategory no vacío) no tipea opciones a mano: el
+  // backend las calcula solas a partir del catálogo, así que acá van vacías.
   const buildOptionGroupsPayload = (): UpsertOptionGroupInput[] | null => {
     const payload: UpsertOptionGroupInput[] = [];
     for (const g of optionGroups) {
       if (!g.name.trim()) { setOptionsError("Todos los grupos necesitan un nombre."); return null; }
-      if (g.options.length === 0) { setOptionsError(`El grupo "${g.name}" necesita al menos una opción.`); return null; }
+      const sourceCategory = g.sourceCategory.trim() ? g.sourceCategory.trim() : null;
+      if (!sourceCategory && g.options.length === 0) {
+        setOptionsError(`El grupo "${g.name}" necesita al menos una opción, o vincularlo a una categoría.`);
+        return null;
+      }
       let quantityTarget: number | null = null;
       if (g.selectionType === "quantity") {
         quantityTarget = Number(g.quantityTarget);
@@ -210,13 +219,15 @@ export function AdminProducts() {
         }
       }
       const options = [];
-      for (const o of g.options) {
-        if (!o.name.trim()) { setOptionsError(`Alguna opción del grupo "${g.name}" no tiene nombre.`); return null; }
-        const priceDelta = Number(o.priceDelta);
-        if (!Number.isFinite(priceDelta)) { setOptionsError(`El precio extra de "${o.name}" no es válido.`); return null; }
-        options.push({ name: o.name.trim(), priceDelta, sortOrder: options.length });
+      if (!sourceCategory) {
+        for (const o of g.options) {
+          if (!o.name.trim()) { setOptionsError(`Alguna opción del grupo "${g.name}" no tiene nombre.`); return null; }
+          const priceDelta = Number(o.priceDelta);
+          if (!Number.isFinite(priceDelta)) { setOptionsError(`El precio extra de "${o.name}" no es válido.`); return null; }
+          options.push({ name: o.name.trim(), priceDelta, sortOrder: options.length });
+        }
       }
-      payload.push({ name: g.name.trim(), selectionType: g.selectionType, required: g.required, quantityTarget, sortOrder: payload.length, options });
+      payload.push({ name: g.name.trim(), selectionType: g.selectionType, required: g.required, quantityTarget, sourceCategory, sortOrder: payload.length, options });
     }
     return payload;
   };
@@ -306,6 +317,10 @@ export function AdminProducts() {
               <input type="checkbox" checked={form.featured} onChange={e => setForm(f => ({ ...f, featured: e.target.checked }))} className="accent-primary" />
               Destacado (aparece en el inicio)
             </label>
+            <label className="flex items-center gap-2 text-sm" title="Permite que este producto aparezca como opción dentro de grupos 'vinculados a categoría' de otros productos de la misma categoría (ej. cada sabor de empanada, para media docena/docena)">
+              <input type="checkbox" checked={form.offerAsOption} onChange={e => setForm(f => ({ ...f, offerAsOption: e.target.checked }))} className="accent-primary" />
+              Ofrecer como opción en grupos vinculados
+            </label>
           </div>
           {error && <p className="text-sm text-red-600 mb-3">{error}</p>}
           <div className="flex gap-3">
@@ -391,22 +406,53 @@ export function AdminProducts() {
                         )}
                       </div>
 
-                      <div className="space-y-1.5 mb-2">
-                        {group.options.map((opt, oi) => (
-                          <div key={oi} className="flex items-center gap-2">
-                            <input type="text" value={opt.name} onChange={e => updateOption(gi, oi, { name: e.target.value })}
-                              placeholder="Opción (ej. Napolitana)"
-                              className="flex-1 px-2.5 py-1.5 border border-border rounded-lg bg-background text-sm" />
-                            <input type="number" step="1" value={opt.priceDelta} onChange={e => updateOption(gi, oi, { priceDelta: e.target.value })}
-                              placeholder="+$"
-                              className="w-24 px-2.5 py-1.5 border border-border rounded-lg bg-background text-sm font-mono" />
-                            <button onClick={() => removeOption(gi, oi)} className="p-1.5 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 hover:text-red-600 shrink-0"><Trash2 size={13} /></button>
+                      <label className="flex items-center gap-1.5 text-xs mb-3">
+                        Origen de las opciones:
+                        <select value={group.sourceCategory} onChange={e => updateGroup(gi, { sourceCategory: e.target.value })}
+                          className="px-2.5 py-1.5 border border-border rounded-lg bg-background text-xs">
+                          <option value="">Manual (tipear opciones abajo)</option>
+                          {categoryOptions.map(c => <option key={c} value={c}>Vinculado a "{c}"</option>)}
+                        </select>
+                      </label>
+
+                      {group.sourceCategory ? (
+                        // Grupo dinámico: nada para tipear acá — las opciones se calculan solas
+                        // en el backend (productos de esta categoría, activos, con stock y
+                        // "Ofrecer como opción" tildado). Este preview usa el mismo criterio
+                        // solo para feedback inmediato en el admin, la fuente de verdad es el
+                        // backend al guardar/leer el producto.
+                        (() => {
+                          const eligible = products.filter(pr => pr.category === group.sourceCategory && pr.active && !pr.outOfStock && pr.offerAsOption);
+                          return eligible.length > 0 ? (
+                            <p className="text-xs text-muted-foreground">
+                              Van a aparecer como opción: <span className="font-medium text-foreground">{eligible.map(p => p.name).join(", ")}</span>
+                            </p>
+                          ) : (
+                            <p className="text-xs text-amber-700">
+                              Ningún producto de "{group.sourceCategory}" está marcado como "Ofrecer como opción" (o están todos sin stock/inactivos) — este grupo no va a tener opciones para elegir todavía.
+                            </p>
+                          );
+                        })()
+                      ) : (
+                        <>
+                          <div className="space-y-1.5 mb-2">
+                            {group.options.map((opt, oi) => (
+                              <div key={oi} className="flex items-center gap-2">
+                                <input type="text" value={opt.name} onChange={e => updateOption(gi, oi, { name: e.target.value })}
+                                  placeholder="Opción (ej. Napolitana)"
+                                  className="flex-1 px-2.5 py-1.5 border border-border rounded-lg bg-background text-sm" />
+                                <input type="number" step="1" value={opt.priceDelta} onChange={e => updateOption(gi, oi, { priceDelta: e.target.value })}
+                                  placeholder="+$"
+                                  className="w-24 px-2.5 py-1.5 border border-border rounded-lg bg-background text-sm font-mono" />
+                                <button onClick={() => removeOption(gi, oi)} className="p-1.5 rounded-lg border border-border hover:bg-red-50 hover:border-red-200 hover:text-red-600 shrink-0"><Trash2 size={13} /></button>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
-                      <button onClick={() => addOption(gi)} className="text-xs flex items-center gap-1 text-primary font-semibold hover:underline">
-                        <Plus size={12} /> Agregar opción
-                      </button>
+                          <button onClick={() => addOption(gi)} className="text-xs flex items-center gap-1 text-primary font-semibold hover:underline">
+                            <Plus size={12} /> Agregar opción
+                          </button>
+                        </>
+                      )}
                     </div>
                   ))}
                   {optionGroups.length === 0 && (
@@ -467,6 +513,7 @@ export function AdminProducts() {
                       {!p.active && <span className="text-xs bg-gray-100 text-gray-600 border border-gray-300 px-2 py-0.5 rounded-full">Inactivo</span>}
                       {p.outOfStock && <span className="text-xs bg-amber-50 text-amber-700 border border-amber-300 px-2 py-0.5 rounded-full">Sin stock</span>}
                       {p.featured && <span className="text-xs bg-primary/10 text-primary border border-primary/30 px-2 py-0.5 rounded-full">Destacado</span>}
+                      {p.offerAsOption && <span className="text-xs bg-blue-50 text-blue-700 border border-blue-300 px-2 py-0.5 rounded-full">Es opción</span>}
                     </div>
                   </td>
                   <td className="px-4 py-2.5">

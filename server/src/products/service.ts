@@ -8,6 +8,7 @@ import type {
   CreateProductInput,
   ProductDTO,
   ProductImageDTO,
+  ProductOptionDTO,
   ProductOptionGroupDTO,
   SelectionType,
   UpdateProductInput,
@@ -37,7 +38,46 @@ const PRODUCT_INCLUDE = {
   optionGroups: { orderBy: { sortOrder: "asc" }, include: { options: { orderBy: { sortOrder: "asc" } } } },
 } satisfies Prisma.ProductInclude;
 
-function toDTO(product: ProductWithRelations): ProductDTO {
+// Productos elegibles (activos, con stock, offerAsOption=true) de una categoría, para resolver
+// grupos dinámicos (ver ProductOptionGroup.sourceCategory en schema.prisma). Recibe un `cache`
+// compartido entre llamadas de un mismo request (ej. todo un listProducts()) para no repetir la
+// misma consulta si dos productos contenedores apuntan a la misma categoría — ej. "media docena"
+// y "docena" ambas con sourceCategory="Empanadas".
+async function loadOptionSourceProducts(
+  category: string,
+  cache: Map<string, Promise<{ id: number; name: string }[]>>,
+): Promise<{ id: number; name: string }[]> {
+  let pending = cache.get(category);
+  if (!pending) {
+    pending = db.product.findMany({
+      where: { category, active: true, outOfStock: false, offerAsOption: true },
+      orderBy: { id: "asc" },
+      select: { id: true, name: true },
+    });
+    cache.set(category, pending);
+  }
+  return pending;
+}
+
+// Resuelve las opciones de UN grupo: si tiene sourceCategory, las calcula desde el catálogo
+// (priceDelta siempre 0 — ninguna opción dinámica cambia el precio, mismo criterio que ya tenían
+// a mano los sabores de pizza/empanada); si no, devuelve las filas ProductOption guardadas, igual
+// que siempre.
+async function resolveGroupOptions(
+  group: ProductOptionGroup & { options: ProductOption[] },
+  cache: Map<string, Promise<{ id: number; name: string }[]>>,
+): Promise<ProductOptionDTO[]> {
+  if (!group.sourceCategory) {
+    return group.options.map(opt => ({ id: opt.id, name: opt.name, priceDelta: Number(opt.priceDelta), sortOrder: opt.sortOrder }));
+  }
+  const sourceProducts = await loadOptionSourceProducts(group.sourceCategory, cache);
+  return sourceProducts.map((p, sortOrder) => ({ id: p.id, name: p.name, priceDelta: 0, sortOrder }));
+}
+
+async function toDTO(
+  product: ProductWithRelations,
+  cache: Map<string, Promise<{ id: number; name: string }[]>> = new Map(),
+): Promise<ProductDTO> {
   return {
     id: product.id,
     name: product.name,
@@ -45,18 +85,20 @@ function toDTO(product: ProductWithRelations): ProductDTO {
     price: Number(product.price),
     description: product.description,
     images: product.images.map((img): ProductImageDTO => ({ id: img.id, url: img.url, sortOrder: img.sortOrder })),
-    optionGroups: product.optionGroups.map((group): ProductOptionGroupDTO => ({
+    optionGroups: await Promise.all(product.optionGroups.map(async (group): Promise<ProductOptionGroupDTO> => ({
       id: group.id,
       name: group.name,
       selectionType: group.selectionType as SelectionType,
       required: group.required,
       quantityTarget: group.quantityTarget,
+      sourceCategory: group.sourceCategory,
       sortOrder: group.sortOrder,
-      options: group.options.map(opt => ({ id: opt.id, name: opt.name, priceDelta: Number(opt.priceDelta), sortOrder: opt.sortOrder })),
-    })),
+      options: await resolveGroupOptions(group, cache),
+    }))),
     featured: product.featured,
     active: product.active,
     outOfStock: product.outOfStock,
+    offerAsOption: product.offerAsOption,
   };
 }
 
@@ -68,7 +110,10 @@ function toDTO(product: ProductWithRelations): ProductDTO {
 // real la primera vez.
 export async function listProducts(): Promise<ProductDTO[]> {
   const products = await db.product.findMany({ orderBy: { id: "asc" }, include: PRODUCT_INCLUDE });
-  return products.map(toDTO);
+  // Cache compartido entre todos los productos de esta corrida: si "media docena" y "docena"
+  // apuntan a la misma sourceCategory, la consulta de productos elegibles se hace una sola vez.
+  const cache = new Map<string, Promise<{ id: number; name: string }[]>>();
+  return Promise.all(products.map(p => toDTO(p, cache)));
 }
 
 export async function createProduct(input: CreateProductInput): Promise<ProductDTO> {
@@ -152,6 +197,7 @@ export async function replaceOptionGroups(productId: number, groups: CreateOptio
           selectionType: group.selectionType,
           required: group.required,
           quantityTarget: group.quantityTarget,
+          sourceCategory: group.sourceCategory,
           sortOrder: group.sortOrder,
           options: { create: group.options },
         },

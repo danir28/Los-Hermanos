@@ -20,6 +20,12 @@ export type ProductOptionGroupDTO = {
   selectionType: SelectionType;
   required: boolean;
   quantityTarget: number | null;
+  // Si no es null, `options` fue calculado dinámicamente a partir del catálogo (ver
+  // resolveGroupOptions en service.ts) en vez de venir de filas ProductOption guardadas — el
+  // valor es la categoría fuente (ej. "Empanadas"). El admin lo necesita para saber en qué modo
+  // mostrar el editor del grupo; el resto de los consumidores (carrito, ProductOptionsModal)
+  // pueden ignorarlo y tratar `options` igual sea cual sea el origen.
+  sourceCategory: string | null;
   sortOrder: number;
   options: ProductOptionDTO[];
 };
@@ -38,6 +44,9 @@ export type ProductDTO = {
   featured: boolean;
   active: boolean;
   outOfStock: boolean;
+  // Si true, este producto puede aparecer como opción calculada dentro de un ProductOptionGroup
+  // de otro producto con sourceCategory = esta category (ver comentario en schema.prisma).
+  offerAsOption: boolean;
 };
 
 // Datos para crear un producto — ya no incluye `image`: un producto nace sin fotos y se le
@@ -50,6 +59,7 @@ export type CreateProductInput = {
   featured: boolean;
   active: boolean;
   outOfStock: boolean;
+  offerAsOption: boolean;
 };
 
 // Edición parcial: PATCH puede mandar solo el campo que cambió (ej. solo "price").
@@ -63,6 +73,10 @@ export type CreateOptionGroupInput = {
   selectionType: SelectionType;
   required: boolean;
   quantityTarget: number | null;
+  // Categoría fuente si el grupo es dinámico, null si es manual (ver ProductOptionGroupDTO). Si
+  // no es null, `options` se ignora al guardar — no tiene sentido persistir filas que nunca se
+  // van a leer (resolveGroupOptions las calcula solas).
+  sourceCategory: string | null;
   sortOrder: number;
   options: CreateOptionInput[];
 };
