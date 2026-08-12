@@ -16,6 +16,14 @@ ordersRouter.post("/", asyncHandler(async (req, res) => {
     res.status(400).json({ error: 'Faltan datos del pedido ("customer", "phone", "type", "estimatedTime", "items")' });
     return;
   }
+  // El teléfono solo puede contener dígitos — el frontend ya filtra esto en el propio input
+  // (ver onlyDigits en src/app/lib/phone.ts), pero el endpoint es público, así que esto es la
+  // validación real: cualquiera que le pegue directo a la API sin pasar por la UI también queda
+  // sujeto a la misma regla.
+  if (!/^\d+$/.test(body.phone)) {
+    res.status(400).json({ error: 'El teléfono solo puede contener números' });
+    return;
+  }
   try {
     const order = await createOrder(body as CreateOrderInput);
     // Fire-and-forget: un fallo al avisarle a cocina (VAPID sin configurar, suscripción

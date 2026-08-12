@@ -36,14 +36,14 @@ describe("CustomerCart — validación obligatoria", () => {
   it("sigue disabled con nombre + teléfono pero sin horario elegido", async () => {
     const { user } = await setup();
     await user.type(screen.getByPlaceholderText("Juan García"), "María López");
-    await user.type(screen.getByPlaceholderText("11-1234-5678"), "1155667788");
+    await user.type(screen.getByPlaceholderText("1123456789"), "1155667788");
     expect(screen.getByRole("button", { name: "Confirmar Pedido" })).toBeDisabled();
   });
 
   it("habilita el botón con las 3 condiciones y llama a onConfirm con los datos", async () => {
     const { onConfirm, user } = await setup();
     await user.type(screen.getByPlaceholderText("Juan García"), "María López");
-    await user.type(screen.getByPlaceholderText("11-1234-5678"), "1155667788");
+    await user.type(screen.getByPlaceholderText("1123456789"), "1155667788");
     await user.click(screen.getByRole("button", { name: "19:00" }));
 
     const confirmButton = screen.getByRole("button", { name: "Confirmar Pedido" });
@@ -56,7 +56,7 @@ describe("CustomerCart — validación obligatoria", () => {
   it("queda disabled si el local está cerrado, aunque los 3 campos estén completos", async () => {
     const { user } = await setup(false);
     await user.type(screen.getByPlaceholderText("Juan García"), "María López");
-    await user.type(screen.getByPlaceholderText("11-1234-5678"), "1155667788");
+    await user.type(screen.getByPlaceholderText("1123456789"), "1155667788");
     await user.click(screen.getByRole("button", { name: "19:00" }));
 
     expect(screen.getByRole("button", { name: "Local cerrado" })).toBeDisabled();

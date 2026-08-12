@@ -3,6 +3,7 @@ import { Search, CheckCircle, Clock, Plus, Minus, X, MessageSquare } from "lucid
 import { ITEM_NOTES_MAX_LENGTH, type CartItem, type OrderType, type Product } from "../types";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
+import { onlyDigits } from "../lib/phone";
 import { ConfirmDialog, ProductOptionsModal, SlotPicker } from "../components/shared";
 
 // Datos del pedido que arma este formulario, para que AppStaff.tsx lo cree en el estado
@@ -200,7 +201,7 @@ export function ReceptionistCreateOrder({ onConfirm, isOpenNow = null }: { onCon
             <div className="space-y-2.5">
               <input type="text" placeholder="Nombre completo" value={name} onChange={e => setName(e.target.value)}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm placeholder:text-muted-foreground" />
-              <input type="tel" placeholder="Teléfono" value={phone} onChange={e => setPhone(e.target.value)}
+              <input type="tel" inputMode="numeric" placeholder="Teléfono" value={phone} onChange={e => setPhone(onlyDigits(e.target.value))}
                 className="w-full px-3 py-2 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm placeholder:text-muted-foreground" />
             </div>
           </div>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { ShoppingCart, Clock, Phone, User, Plus, Minus, Trash2, MessageSquare } from "lucide-react";
 import { ITEM_NOTES_MAX_LENGTH, type CartItem } from "../types";
 import { formatCurrency } from "../lib/format";
+import { onlyDigits } from "../lib/phone";
 import { SlotPicker } from "../components/shared";
 
 // Pantalla de carrito del cliente: edición de cantidades y confirmación del pedido con nombre,
@@ -97,7 +98,7 @@ export function CustomerCart({ cart, onUpdateCart, onUpdateNotes, onConfirm, isO
                 <label className="text-xs font-semibold text-muted-foreground uppercase tracking-wide block mb-1.5">Teléfono</label>
                 <div className="relative">
                   <Phone className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={15} />
-                  <input type="tel" placeholder="11-1234-5678" value={phone} onChange={e => setPhone(e.target.value)}
+                  <input type="tel" inputMode="numeric" placeholder="1123456789" value={phone} onChange={e => setPhone(onlyDigits(e.target.value))}
                     className="w-full pl-9 pr-3 py-2.5 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-sm placeholder:text-muted-foreground" />
                 </div>
               </div>

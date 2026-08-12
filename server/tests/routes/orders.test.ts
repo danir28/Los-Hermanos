@@ -28,6 +28,18 @@ describe("POST /api/orders", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toEqual(expect.any(String));
   });
+
+  it("responde 400 si el teléfono trae algo que no sea un dígito", async () => {
+    const res = await request(app).post("/api/orders").send({
+      customer: "Cliente Teléfono Inválido",
+      phone: "11-2345-6789",
+      type: "presencial",
+      estimatedTime: "19:00",
+      items: [{ name: "Empanada de carne", qty: 1, price: 1500 }],
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toEqual(expect.any(String));
+  });
 });
 
 describe("GET /api/orders", () => {
