@@ -4,7 +4,7 @@ import {
   ChefHat, BarChart3, FileBarChart, LogOut, UtensilsCrossed, CalendarClock,
 } from "lucide-react";
 import type { CartItem, Order, OrderStatus, OrderType } from "./types";
-import { api, type UserRole } from "./lib/api";
+import { api, type BusinessHours, type UserRole } from "./lib/api";
 import { AuthProvider, LoginScreen, useAuth } from "./auth";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
 import { KitchenPanel, KitchenAssign, KitchenSlotWindows } from "./cocina";
@@ -98,6 +98,15 @@ function AppStaffContent() {
   // nuevo y sonar el beep (ver src/app/lib/sound.ts) — null hasta el primer fetch, así el primer
   // refreshOrders() de la sesión completa la lista sin sonar por todos los pedidos preexistentes.
   const knownOrderIds = useRef<Set<string> | null>(null);
+  // Horario de atención: decide si se bloquea la carga manual de pedidos en "Nuevo Pedido" (ver
+  // ReceptionistCreateOrder más abajo) — recepción y cocina quedan sujetas a la misma regla que
+  // el checkout online del cliente (ver AppCliente.tsx), sin excepción (decisión explícita del
+  // dueño del proyecto). Se refresca al montar y cada vez que se entra a "create", por si el
+  // horario cambió (ej. cruzó la hora de cierre) mientras se estaba en otra vista.
+  const [businessHours, setBusinessHours] = useState<BusinessHours | null>(null);
+  const refreshBusinessHours = () => { api.businessHoursGet().then(setBusinessHours).catch(() => {}); };
+  useEffect(refreshBusinessHours, []);
+  useEffect(() => { if (staffView === "create") refreshBusinessHours(); }, [staffView]);
 
   // Al loguearse (o al validar el token guardado contra /me), arranca en la primera
   // vista de la sección del usuario. La sección en sí no es un estado propio: es
@@ -280,7 +289,7 @@ function AppStaffContent() {
           <RoleNavTabs tabs={RECEPTIONIST_TABS} active={staffView} onSelect={setStaffView} />
           {staffView === "dashboard" && <ReceptionistDashboard orders={orders} onNavigate={setStaffView} onUpdateStatus={updateStatus} />}
           {staffView === "orders"    && <ReceptionistOrders orders={orders} onUpdateStatus={updateStatus} />}
-          {staffView === "create"    && <ReceptionistCreateOrder onConfirm={createManualOrder} />}
+          {staffView === "create"    && <ReceptionistCreateOrder onConfirm={createManualOrder} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
         </>
       )}
 
@@ -288,7 +297,7 @@ function AppStaffContent() {
         <>
           <RoleNavTabs tabs={KITCHEN_TABS} active={staffView} onSelect={setStaffView} />
           {staffView === "panel"       && <KitchenPanel orders={orders} token={token} onGoAssign={id => { setPreselectedAssignId(id); setStaffView("reprogramar"); }} onPrint={setPrintOrder} onUpdateStatus={updateStatus} />}
-          {staffView === "create"      && <ReceptionistCreateOrder onConfirm={createManualOrder} />}
+          {staffView === "create"      && <ReceptionistCreateOrder onConfirm={createManualOrder} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
           {staffView === "reprogramar" && <KitchenAssign orders={orders} onAssigned={assignTime} preselectedId={preselectedAssignId} />}
           {staffView === "horarios"    && <KitchenSlotWindows />}
         </>

@@ -150,7 +150,7 @@ export default function AppCliente() {
       </nav>
 
       {customerView === "home"         && <CustomerHome onNavigate={goToView} businessHours={businessHours} />}
-      {customerView === "menu"         && <CustomerMenu cart={cart} onAddToCart={addToCart} onNavigate={goToView} initialCategory={menuCategory} />}
+      {customerView === "menu"         && <CustomerMenu cart={cart} onAddToCart={addToCart} onNavigate={goToView} initialCategory={menuCategory} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
       {customerView === "cart"         && <CustomerCart cart={cart} onUpdateCart={updateCart} onUpdateNotes={updateCartNotes} onConfirm={confirmOrder} isOpenNow={businessHours ? businessHours.isOpenNow : null} />}
       {customerView === "confirmation" && confirmedOrder && <CustomerConfirmation order={confirmedOrder} onTrack={() => goToView("tracking")} />}
       {customerView === "tracking"     && <CustomerTracking preloadOrder={confirmedOrder ?? undefined} />}

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ShoppingCart, Search, Plus } from "lucide-react";
+import { ShoppingCart, Search, Plus, Clock } from "lucide-react";
 import type { CartItem, Product } from "../types";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
@@ -8,8 +8,11 @@ import { ImageCarousel, ProductOptionsModal } from "../components/shared";
 // Pantalla de menú del cliente: filtro por categoría, búsqueda y agregado de productos al carrito.
 // initialCategory (default "Todos") deja que quien navega hasta acá — hoy, las tarjetas de
 // categoría destacada de CustomerHome — abra el menú ya filtrado, en vez de arrancar siempre en
-// el catálogo completo.
-export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = "Todos" }: { cart: CartItem[]; onAddToCart: (line: CartItem) => void; onNavigate: (v: string) => void; initialCategory?: string }) {
+// el catálogo completo. isOpenNow llega calculado desde el backend (ver AppCliente.tsx); con el
+// local cerrado se bloquea el agregado al carrito acá mismo (no solo en el checkout de
+// CustomerCart) — así el cliente no arma un pedido entero para recién enterarse al final de que
+// no lo puede confirmar.
+export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = "Todos", isOpenNow }: { cart: CartItem[]; onAddToCart: (line: CartItem) => void; onNavigate: (v: string) => void; initialCategory?: string; isOpenNow: boolean | null }) {
   const { products, categories } = useProducts();
   const [category, setCategory] = useState(initialCategory);
   const [search, setSearch] = useState("");
@@ -26,6 +29,7 @@ export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = 
   });
 
   const cartCount = cart.reduce((s, i) => s + i.qty, 0);
+  const closed = isOpenNow === false;
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
@@ -40,6 +44,12 @@ export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = 
           </button>
         )}
       </div>
+      {closed && (
+        <div className="mb-6 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex gap-2.5 leading-relaxed">
+          <Clock size={14} className="shrink-0 mt-0.5 text-red-600" />
+          <span>La rotisería está cerrada en este momento, así que no se puede agregar productos al carrito. Podés revisar el horario de atención en el inicio y volver a intentarlo cuando esté abierto.</span>
+        </div>
+      )}
       <div className="relative mb-4">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" size={17} />
         <input type="text" placeholder="Buscar productos..." value={search} onChange={e => setSearch(e.target.value)}
@@ -79,6 +89,8 @@ export function CustomerMenu({ cart, onAddToCart, onNavigate, initialCategory = 
                   <span className="font-display font-bold text-primary text-2xl">{formatCurrency(product.price)}</span>
                   {product.outOfStock ? (
                     <span className="text-xs text-muted-foreground border border-border px-3 py-2 rounded-xl">No disponible</span>
+                  ) : closed ? (
+                    <span className="text-xs text-muted-foreground border border-border px-3 py-2 rounded-xl">Local cerrado</span>
                   ) : hasOptions ? (
                     <button onClick={() => setConfiguring(product)}
                       className="flex items-center gap-1.5 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all bg-primary/10 text-primary hover:bg-primary hover:text-primary-foreground">

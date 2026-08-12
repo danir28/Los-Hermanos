@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, CheckCircle, Plus, Minus, X, MessageSquare } from "lucide-react";
+import { Search, CheckCircle, Clock, Plus, Minus, X, MessageSquare } from "lucide-react";
 import { ITEM_NOTES_MAX_LENGTH, type CartItem, type OrderType, type Product } from "../types";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
@@ -13,7 +13,13 @@ type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]
 
 // Formulario de carga manual de pedidos por parte de recepción o cocina (pedidos telefónicos o
 // presenciales) — 100% agnóstico de rol, solo recibe onConfirm, por eso lo reusa también cocina.
-export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewReceptionistOrder) => void }) {
+// isOpenNow llega calculado desde el backend (ver AppStaff.tsx, mismo criterio que
+// CustomerMenu/CustomerCart del lado cliente): con el local cerrado, ni recepción ni cocina
+// pueden agregar productos ni confirmar el pedido — la carga manual ya no es una excepción a
+// esta regla (decisión explícita del dueño del proyecto, revierte la anterior que sí las dejaba
+// cargar pedidos con el horario cerrado). Opcional con default null (no bloquea) para no forzar
+// a todo caller a resolverlo antes de que llegue el primer fetch.
+export function ReceptionistCreateOrder({ onConfirm, isOpenNow = null }: { onConfirm: (order: NewReceptionistOrder) => void; isOpenNow?: boolean | null }) {
   const { products, categories } = useProducts();
   const [orderCart, setOrderCart] = useState<CartItem[]>([]);
   const [name, setName] = useState("");
@@ -60,6 +66,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
   );
 
   const total = orderCart.reduce((s, i) => s + i.price * i.qty, 0);
+  const closed = isOpenNow === false;
 
   // Valida que haya productos, horario y datos del cliente cargados (las tres condiciones son
   // obligatorias, igual que en el checkout online del cliente — ver CustomerCart.tsx), muestra
@@ -67,7 +74,7 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
   // con el pedido armado, así AppStaff.tsx lo crea en el backend sin que se sienta
   // instantáneo/brusco para quien lo carga.
   const handleConfirm = () => {
-    if (!orderCart.length || !name.trim() || !phone.trim() || !time) return;
+    if (!orderCart.length || !name.trim() || !phone.trim() || !time || closed) return;
     setConfirmed(true);
     setTimeout(() => {
       setConfirmed(false);
@@ -97,6 +104,13 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
           </button>
         )}
       </div>
+
+      {closed && (
+        <div className="mb-6 p-3.5 bg-red-50 border border-red-200 rounded-xl text-xs text-red-800 flex gap-2.5 leading-relaxed">
+          <Clock size={14} className="shrink-0 mt-0.5 text-red-600" />
+          <span>La rotisería está cerrada en este momento, así que no se pueden cargar pedidos nuevos. Si el horario configurado no coincide con la realidad de hoy, avisale al administrador para que lo ajuste desde Horario.</span>
+        </div>
+      )}
 
       {/* Cancel confirm dialog */}
       {showCancelConfirm && (
@@ -144,12 +158,12 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
                         <Minus size={11} />
                       </button>
                       <span className="w-5 text-center font-mono font-bold text-sm">{inCart.qty}</span>
-                      <button onClick={() => updateQty(String(p.id), 1)} data-testid={`qty-increase-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted">
+                      <button onClick={() => updateQty(String(p.id), 1)} disabled={closed} data-testid={`qty-increase-${p.id}`} className="w-7 h-7 rounded-full border border-border flex items-center justify-center hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed">
                         <Plus size={11} />
                       </button>
                     </div>
                   ) : (
-                    <button onClick={() => hasOptions ? setConfiguring(p) : addItem(p)} data-testid={`add-product-${p.id}`} className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors shrink-0">
+                    <button onClick={() => hasOptions ? setConfiguring(p) : addItem(p)} disabled={closed} data-testid={`add-product-${p.id}`} className="w-8 h-8 rounded-full bg-primary/10 text-primary flex items-center justify-center hover:bg-primary hover:text-primary-foreground transition-colors shrink-0 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-primary/10 disabled:hover:text-primary">
                       <Plus size={15} />
                     </button>
                   )}
@@ -227,9 +241,9 @@ export function ReceptionistCreateOrder({ onConfirm }: { onConfirm: (order: NewR
               <CheckCircle size={18} /> ¡Pedido registrado!
             </div>
           ) : (
-            <button onClick={handleConfirm} disabled={!orderCart.length || !name.trim() || !phone.trim() || !time} data-testid="confirm-order"
+            <button onClick={handleConfirm} disabled={!orderCart.length || !name.trim() || !phone.trim() || !time || closed} data-testid="confirm-order"
               className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-md">
-              Confirmar Pedido
+              {closed ? "Local cerrado" : "Confirmar Pedido"}
             </button>
           )}
         </div>

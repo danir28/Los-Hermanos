@@ -13,10 +13,13 @@ export class OrderNotFoundError extends Error {
   }
 }
 
-// Se intentó crear un pedido online fuera del horario de atención configurado (ver
-// businessHours/service.ts#isBusinessOpenNow). Solo aplica a `type === "online"`: recepción
-// puede seguir cargando pedidos manualmente sin esta restricción (decisión explícita del
-// dueño del proyecto).
+// Se intentó crear un pedido fuera del horario de atención configurado (ver
+// businessHours/service.ts#isBusinessOpenNow). Aplica a cualquier canal de origen — cliente
+// (checkout online), recepción y cocina (carga manual presencial/telefónica) — sin excepción
+// (decisión explícita del dueño del proyecto, revierte una decisión anterior que sí dejaba a
+// recepción cargar pedidos con el horario cerrado). Si el horario real de un día puntual no
+// coincide con lo configurado, la solución es ajustarlo desde AdminBusinessHours, no forzar un
+// pedido manual sorteando esta validación.
 export class BusinessClosedError extends Error {
   constructor() {
     super("La rotisería está cerrada en este momento. Podés hacer tu pedido en el horario de atención.");
@@ -69,7 +72,7 @@ function toDTO(order: OrderWithItems): OrderDTO {
 // chequeo de cupo del turno: al quedar dentro de la misma transacción, el row-lock que toma
 // protege ambas cosas, sin necesidad de un lock aparte.
 export async function createOrder(input: CreateOrderInput): Promise<OrderDTO> {
-  if (input.type === "online" && !(await isBusinessOpenNow())) {
+  if (!(await isBusinessOpenNow())) {
     throw new BusinessClosedError();
   }
 
