@@ -57,6 +57,10 @@ export type ProductOptionGroup = {
   // y ProductOptionsModal no necesitan tratarlo distinto: `options` ya llega resuelto igual sea
   // cual sea el origen. Solo lo usa AdminProducts para saber en qué modo mostrar el editor.
   sourceCategory: string | null;
+  // Precio que ya trae resuelto cualquier opción dinámica sin override puntual (ver
+  // options[].priceDelta) — irrelevante en un grupo manual, siempre 0 ahí. Solo lo usa
+  // AdminProducts para precargar el campo "Precio por defecto" al editar un grupo dinámico.
+  defaultPriceDelta: number;
   sortOrder: number;
   options: ProductOption[];
 };

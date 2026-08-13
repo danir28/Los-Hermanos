@@ -153,6 +153,11 @@ model Product {
 
   images       ProductImage[]
   optionGroups ProductOptionGroup[]
+  // Overrides de precio de OTROS grupos dinámicos que apuntan a este producto puntual como fuente
+  // (ver ProductOption.sourceProductId) — ej. la fila que le da a "Pizza Super" un priceDelta
+  // distinto dentro del grupo "Sabor" de "Mitad pizza". No tiene relación con optionGroups (los
+  // grupos propios de ESTE producto).
+  optionOverrides ProductOption[]
 
   @@index([category])
   @@map("products")
@@ -176,36 +181,56 @@ model Product {
 // sabor nuevo (o sin stock) se refleja solo en "Empanadas (docena)"/"Mitad pizza" sin editarlas a
 // mano, y sin duplicar la lista de sabores en cada producto contenedor. Si sourceCategory es null
 // (el caso de "Agregados → Papas fritas" en el sandwich, por ejemplo), el grupo sigue funcionando
-// como siempre: opciones tipeadas a mano en `options`. Un grupo dinámico igual puede tener filas
-// en `options` a nivel de base, pero el admin las deja vacías — se ignoran en el cálculo.
+// como siempre: opciones tipeadas a mano en `options`.
+//
+// defaultPriceDelta (agregado 12/8/2026) solo tiene efecto para un grupo dinámico: es el precio
+// que aporta cualquier opción resuelta de sourceCategory que NO tenga un override puntual (ver
+// ProductOption.sourceProductId más abajo) — pensado para "Mitad pizza": la mayoría de los
+// sabores valen lo mismo como mitad ($8500), y solo el que sale distinto (Super, $10000) necesita
+// su propia fila. Se ignora en un grupo manual (cada opción ya trae su propio priceDelta
+// explícito, no hace falta un default). Decisión explícita del dueño del proyecto: reusar los
+// productos de la categoría como fuente de sabores (sin duplicarlos en una lista aparte "mitad
+// X") pero permitiendo que unos pocos tengan un precio distinto al resto.
 model ProductOptionGroup {
-  id             Int             @id @default(autoincrement())
-  productId      Int
-  product        Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
-  name           String
-  selectionType  String
-  required       Boolean         @default(false)
-  quantityTarget Int?
-  sourceCategory String?
-  sortOrder      Int             @default(0)
-  options        ProductOption[]
+  id                Int             @id @default(autoincrement())
+  productId         Int
+  product           Product         @relation(fields: [productId], references: [id], onDelete: Cascade)
+  name              String
+  selectionType     String
+  required          Boolean         @default(false)
+  quantityTarget    Int?
+  sourceCategory    String?
+  defaultPriceDelta Decimal         @default(0) @db.Decimal(10, 2)
+  sortOrder         Int             @default(0)
+  options           ProductOption[]
 
   @@index([productId])
   @@map("product_option_groups")
 }
 
-// Una opción dentro de un ProductOptionGroup (ej. "Napolitana" dentro del grupo "Sabor").
-// priceDelta se suma al precio base del producto cuando se elige esa opción (en grupos tipo
-// "quantity", se suma multiplicado por la cantidad elegida de esa opción) — 0 si no cambia el
-// precio, como en los sabores de pizza/empanada de esta primera carga.
+// Una opción dentro de un ProductOptionGroup. Dos usos según el grupo sea manual o dinámico (ver
+// ProductOptionGroup.sourceCategory):
+// - Grupo manual: una opción tipeada a mano (ej. "Napolitana" dentro del grupo "Sabor" del
+//   sandwich) — `name`/`priceDelta` son los que se muestran y se suman tal cual, `sourceProductId`
+//   queda null (no aplica).
+// - Grupo dinámico: una fila acá es un OVERRIDE de precio para un producto puntual de la
+//   categoría vinculada (`sourceProductId` apunta a ese Product) — no la lista completa de
+//   opciones (esa se sigue calculando en vivo desde Product, ver resolveGroupOptions), solo las
+//   excepciones que no usan el `defaultPriceDelta` del grupo. `name` queda como referencia legible
+//   del producto al momento de guardar el override (no autoritativa: resolveGroupOptions siempre
+//   usa el nombre vivo de Product, no este). onDelete: Cascade en sourceProductId — si se borra el
+//   producto fuente, el override deja de tener sentido.
 model ProductOption {
-  id         Int                @id @default(autoincrement())
-  groupId    Int
-  group      ProductOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
-  name       String
-  priceDelta Decimal            @default(0) @db.Decimal(10, 2)
-  sortOrder  Int                @default(0)
+  id              Int                @id @default(autoincrement())
+  groupId         Int
+  group           ProductOptionGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  name            String
+  priceDelta      Decimal            @default(0) @db.Decimal(10, 2)
+  sourceProductId Int?
+  sourceProduct   Product?           @relation(fields: [sourceProductId], references: [id], onDelete: Cascade)
+  sortOrder       Int                @default(0)
 
+  @@unique([groupId, sourceProductId])
   @@index([groupId])
   @@map("product_options")
 }

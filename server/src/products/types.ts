@@ -26,6 +26,9 @@ export type ProductOptionGroupDTO = {
   // mostrar el editor del grupo; el resto de los consumidores (carrito, ProductOptionsModal)
   // pueden ignorarlo y tratar `options` igual sea cual sea el origen.
   sourceCategory: string | null;
+  // Precio que aporta cualquier opción dinámica que no tenga su propio override (ver
+  // resolveGroupOptions) — irrelevante para un grupo manual, siempre 0 ahí.
+  defaultPriceDelta: number;
   sortOrder: number;
   options: ProductOptionDTO[];
 };
@@ -67,16 +70,24 @@ export type UpdateProductInput = Partial<CreateProductInput>;
 
 // Payload para reemplazar el set completo de grupos de opciones de un producto (PUT
 // /api/products/:id/option-groups) — ver replaceOptionGroups en service.ts.
-export type CreateOptionInput = { name: string; priceDelta: number; sortOrder: number };
+//
+// sourceProductId: null para una opción de un grupo MANUAL (es una opción tipeada a mano, como
+// siempre). Para un grupo DINÁMICO, cada entrada de `options` es en cambio un OVERRIDE de precio
+// para un producto puntual de la categoría vinculada — sourceProductId apunta a ese Product, y
+// `name` queda solo como referencia legible (no autoritativa, ver ProductOption en
+// schema.prisma). Antes de este cambio, un grupo dinámico no podía traer ninguna `options` no
+// vacía; ahora sí, pero únicamente en este formato de override.
+export type CreateOptionInput = { name: string; priceDelta: number; sortOrder: number; sourceProductId: number | null };
 export type CreateOptionGroupInput = {
   name: string;
   selectionType: SelectionType;
   required: boolean;
   quantityTarget: number | null;
-  // Categoría fuente si el grupo es dinámico, null si es manual (ver ProductOptionGroupDTO). Si
-  // no es null, `options` se ignora al guardar — no tiene sentido persistir filas que nunca se
-  // van a leer (resolveGroupOptions las calcula solas).
+  // Categoría fuente si el grupo es dinámico, null si es manual (ver ProductOptionGroupDTO).
   sourceCategory: string | null;
+  // Precio de cualquier opción dinámica sin override puntual (ver ProductOption.sourceProductId
+  // en schema.prisma) — irrelevante y se guarda en 0 para un grupo manual.
+  defaultPriceDelta: number;
   sortOrder: number;
   options: CreateOptionInput[];
 };

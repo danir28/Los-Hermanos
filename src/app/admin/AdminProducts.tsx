@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { ChevronDown, ChevronUp, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import type { Product, ProductOptionGroup, SelectionType } from "../types";
-import { api, type UpsertOptionGroupInput } from "../lib/api";
+import { api, type UpsertOptionGroupInput, type UpsertOptionInput } from "../lib/api";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 import { useAuth } from "../auth";
@@ -23,17 +23,31 @@ function productToForm(p: Product): FormState {
 // guardar (ver buildOptionGroupsPayload). sourceCategory usa "" para representar el modo manual
 // (en vez de null) porque alimenta directo un <select> controlado — se convierte a null recién al
 // armar el payload.
+//
+// Un grupo dinámico (sourceCategory no vacío) usa `defaultPriceDelta`/`overrides` en vez de
+// `options` (que queda vacío ahí): `defaultPriceDelta` es el precio que aporta cualquier sabor
+// SIN precio propio, `overrides` es un precio puntual por producto para los pocos que sí difieren
+// (ej. "Super" a $10000 cuando el resto de las mitades de pizza valen $8500) — se sigue leyendo el
+// SABOR desde el catálogo (sourceCategory), nunca se tipea a mano, solo el precio.
 type LocalOption = { name: string; priceDelta: string };
-type LocalGroup = { name: string; selectionType: SelectionType; required: boolean; quantityTarget: string; sourceCategory: string; options: LocalOption[] };
+type LocalOverride = { sourceProductId: number; name: string; priceDelta: string };
+type LocalGroup = { name: string; selectionType: SelectionType; required: boolean; quantityTarget: string; sourceCategory: string; defaultPriceDelta: string; options: LocalOption[]; overrides: LocalOverride[] };
 
 function groupToLocal(g: ProductOptionGroup): LocalGroup {
+  const dynamic = g.sourceCategory !== null;
   return {
     name: g.name,
     selectionType: g.selectionType,
     required: g.required,
     quantityTarget: g.quantityTarget !== null ? String(g.quantityTarget) : "",
     sourceCategory: g.sourceCategory ?? "",
-    options: g.options.map(o => ({ name: o.name, priceDelta: String(o.priceDelta) })),
+    defaultPriceDelta: String(g.defaultPriceDelta),
+    // g.options ya viene resuelto por el backend (ver ProductOptionGroupDTO): para un grupo
+    // dinámico, "id" es el id del producto fuente y "priceDelta" ya incluye el default o el
+    // override que corresponda — alcanza con precargar overrides con eso, sin distinguir acá
+    // cuál era explícito en la base (se recalcula entero al guardar).
+    options: dynamic ? [] : g.options.map(o => ({ name: o.name, priceDelta: String(o.priceDelta) })),
+    overrides: dynamic ? g.options.map(o => ({ sourceProductId: o.id, name: o.name, priceDelta: String(o.priceDelta) })) : [],
   };
 }
 
@@ -181,7 +195,7 @@ export function AdminProducts() {
   };
 
   // ── Opciones del producto ─────────────────────────────────────────────
-  const addGroup = () => setOptionGroups(gs => [...gs, { name: "", selectionType: "single", required: false, quantityTarget: "", sourceCategory: "", options: [] }]);
+  const addGroup = () => setOptionGroups(gs => [...gs, { name: "", selectionType: "single", required: false, quantityTarget: "", sourceCategory: "", defaultPriceDelta: "0", options: [], overrides: [] }]);
   const updateGroup = (i: number, patch: Partial<LocalGroup>) => setOptionGroups(gs => gs.map((g, idx) => idx === i ? { ...g, ...patch } : g));
   const removeGroup = (i: number) => setOptionGroups(gs => gs.filter((_, idx) => idx !== i));
   const moveGroup = (i: number, dir: -1 | 1) => setOptionGroups(gs => {
@@ -197,10 +211,29 @@ export function AdminProducts() {
     updateGroup(gi, { options: optionGroups[gi].options.map((o, idx) => idx === oi ? { ...o, ...patch } : o) });
   const removeOption = (gi: number, oi: number) => updateGroup(gi, { options: optionGroups[gi].options.filter((_, idx) => idx !== oi) });
 
+  // Precio a mostrar en el input de un producto puntual dentro de un grupo dinámico: el override
+  // que ya tenga cargado, o si no el precio por defecto del grupo.
+  const overridePrice = (group: LocalGroup, sourceProductId: number) =>
+    group.overrides.find(o => o.sourceProductId === sourceProductId)?.priceDelta ?? group.defaultPriceDelta;
+
+  // Actualiza (o crea, si es la primera vez que se toca) el override de precio de un producto
+  // puntual dentro de un grupo dinámico — ej. tipear 10000 en "Pizza Super" dentro de "Mitad
+  // pizza". No hace falta "sacar" el override si el valor vuelve a coincidir con el default: se
+  // manda igual, redundante pero inofensivo (ver buildOptionGroupsPayload).
+  const updateOverride = (gi: number, sourceProductId: number, name: string, priceDelta: string) => {
+    const group = optionGroups[gi];
+    const exists = group.overrides.some(o => o.sourceProductId === sourceProductId);
+    const overrides = exists
+      ? group.overrides.map(o => o.sourceProductId === sourceProductId ? { ...o, priceDelta } : o)
+      : [...group.overrides, { sourceProductId, name, priceDelta }];
+    updateGroup(gi, { overrides });
+  };
+
   // Valida y convierte el estado local (todo en texto, cómodo para inputs) al payload tipado que
   // espera el backend. Devuelve null si algo no es válido, con el motivo en optionsError.
-  // Un grupo "vinculado a categoría" (sourceCategory no vacío) no tipea opciones a mano: el
-  // backend las calcula solas a partir del catálogo, así que acá van vacías.
+  // Un grupo "vinculado a categoría" (sourceCategory no vacío) sigue sin tipear el SABOR a mano
+  // (eso lo calcula el backend a partir del catálogo) pero sí manda un precio: defaultPriceDelta
+  // + un override por cada producto que el admin haya tocado (ver overrides más arriba).
   const buildOptionGroupsPayload = (): UpsertOptionGroupInput[] | null => {
     const payload: UpsertOptionGroupInput[] = [];
     for (const g of optionGroups) {
@@ -218,16 +251,26 @@ export function AdminProducts() {
           return null;
         }
       }
-      const options = [];
-      if (!sourceCategory) {
+
+      let defaultPriceDelta = 0;
+      const options: UpsertOptionInput[] = [];
+      if (sourceCategory) {
+        defaultPriceDelta = Number(g.defaultPriceDelta);
+        if (!Number.isFinite(defaultPriceDelta)) { setOptionsError(`El precio por defecto del grupo "${g.name}" no es válido.`); return null; }
+        for (const o of g.overrides) {
+          const priceDelta = Number(o.priceDelta);
+          if (!Number.isFinite(priceDelta)) { setOptionsError(`El precio de "${o.name}" no es válido.`); return null; }
+          options.push({ name: o.name, priceDelta, sortOrder: options.length, sourceProductId: o.sourceProductId });
+        }
+      } else {
         for (const o of g.options) {
           if (!o.name.trim()) { setOptionsError(`Alguna opción del grupo "${g.name}" no tiene nombre.`); return null; }
           const priceDelta = Number(o.priceDelta);
           if (!Number.isFinite(priceDelta)) { setOptionsError(`El precio extra de "${o.name}" no es válido.`); return null; }
-          options.push({ name: o.name.trim(), priceDelta, sortOrder: options.length });
+          options.push({ name: o.name.trim(), priceDelta, sortOrder: options.length, sourceProductId: null });
         }
       }
-      payload.push({ name: g.name.trim(), selectionType: g.selectionType, required: g.required, quantityTarget, sourceCategory, sortOrder: payload.length, options });
+      payload.push({ name: g.name.trim(), selectionType: g.selectionType, required: g.required, quantityTarget, sourceCategory, defaultPriceDelta, sortOrder: payload.length, options });
     }
     return payload;
   };
@@ -416,21 +459,38 @@ export function AdminProducts() {
                       </label>
 
                       {group.sourceCategory ? (
-                        // Grupo dinámico: nada para tipear acá — las opciones se calculan solas
-                        // en el backend (productos de esta categoría, activos, con stock y
-                        // "Ofrecer como opción" tildado). Este preview usa el mismo criterio
-                        // solo para feedback inmediato en el admin, la fuente de verdad es el
-                        // backend al guardar/leer el producto.
+                        // Grupo dinámico: el SABOR no se tipea acá — se calcula solo en el backend
+                        // (productos de esta categoría, activos, con stock y "Ofrecer como
+                        // opción" tildado; este preview usa el mismo criterio solo para feedback
+                        // inmediato). El PRECIO sí se carga acá: un default para el grupo entero
+                        // más un override por producto para los pocos que valgan distinto.
                         (() => {
                           const eligible = products.filter(pr => pr.category === group.sourceCategory && pr.active && !pr.outOfStock && pr.offerAsOption);
-                          return eligible.length > 0 ? (
-                            <p className="text-xs text-muted-foreground">
-                              Van a aparecer como opción: <span className="font-medium text-foreground">{eligible.map(p => p.name).join(", ")}</span>
-                            </p>
-                          ) : (
-                            <p className="text-xs text-amber-700">
-                              Ningún producto de "{group.sourceCategory}" está marcado como "Ofrecer como opción" (o están todos sin stock/inactivos) — este grupo no va a tener opciones para elegir todavía.
-                            </p>
+                          return (
+                            <div className="space-y-2">
+                              <label className="flex items-center gap-1.5 text-xs">
+                                Precio por defecto (para cualquier opción sin precio propio):
+                                <input type="number" step="1" value={group.defaultPriceDelta}
+                                  onChange={e => updateGroup(gi, { defaultPriceDelta: e.target.value })}
+                                  className="w-24 px-2.5 py-1.5 border border-border rounded-lg bg-background text-xs font-mono" />
+                              </label>
+                              {eligible.length > 0 ? (
+                                <div className="space-y-1.5">
+                                  {eligible.map(p => (
+                                    <div key={p.id} className="flex items-center justify-between gap-2 text-xs">
+                                      <span>{p.name}</span>
+                                      <input type="number" step="1" value={overridePrice(group, p.id)}
+                                        onChange={e => updateOverride(gi, p.id, p.name, e.target.value)}
+                                        className="w-24 px-2.5 py-1.5 border border-border rounded-lg bg-background text-xs font-mono" />
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-amber-700">
+                                  Ningún producto de "{group.sourceCategory}" está marcado como "Ofrecer como opción" (o están todos sin stock/inactivos) — este grupo no va a tener opciones para elegir todavía.
+                                </p>
+                              )}
+                            </div>
                           );
                         })()
                       ) : (
