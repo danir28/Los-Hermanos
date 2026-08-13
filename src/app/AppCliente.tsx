@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { ShoppingCart } from "lucide-react";
 import type { CartItem, Order, OrderType } from "./types";
 import { api, type BusinessHours } from "./lib/api";
+import type { DiscountLine } from "./lib/bundleDiscounts";
 import { CustomerHome, CustomerMenu, CustomerMenuReadOnly, CustomerCart, CustomerConfirmation, CustomerTracking } from "./cliente";
 import logo from "../assets/logo.png";
 
@@ -85,14 +86,20 @@ export default function AppCliente() {
   // precargar el seguimiento, sin necesidad de un segundo pedido al servidor. estimatedTime es
   // el turno de retiro elegido en el SlotPicker de CustomerCart — a diferencia de la carga
   // manual de staff, acá SÍ es obligatorio (el cliente no tiene forma de "avisar después" si
-  // queda sin horario). Si falla (turno lleno, servidor no responde), avisa con un alert y se
-  // queda en el carrito para reintentar.
-  const confirmOrder = async (name: string, phone: string, estimatedTime: string) => {
+  // queda sin horario). discounts ya llega calculado por CustomerCart (ver computeBundleDiscounts
+  // en src/app/lib/bundleDiscounts.ts) — acá solo se agregan como ítems más del pedido, con precio
+  // negativo, para que el total que calcula el backend (suma de items) ya quede descontado sin
+  // que el backend tenga que saber nada de la regla de paquetes. Si falla (turno lleno, servidor
+  // no responde), avisa con un alert y se queda en el carrito para reintentar.
+  const confirmOrder = async (name: string, phone: string, estimatedTime: string, discounts: DiscountLine[]) => {
     try {
       const newOrder = await api.ordersCreate({
         customer: name,
         phone,
-        items: cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes })),
+        items: [
+          ...cart.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes })),
+          ...discounts.map(d => ({ name: d.name, qty: d.qty, price: d.price })),
+        ],
         type: "online" as OrderType,
         estimatedTime,
       });

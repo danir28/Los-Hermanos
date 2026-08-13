@@ -4,6 +4,7 @@ import {
   ChefHat, BarChart3, FileBarChart, LogOut, UtensilsCrossed, CalendarClock,
 } from "lucide-react";
 import type { CartItem, Order, OrderStatus, OrderType } from "./types";
+import type { DiscountLine } from "./lib/bundleDiscounts";
 import { api, type BusinessHours, type UserRole } from "./lib/api";
 import { AuthProvider, LoginScreen, useAuth } from "./auth";
 import { ReceptionistDashboard, ReceptionistOrders, ReceptionistCreateOrder } from "./recepcionista";
@@ -208,13 +209,18 @@ function AppStaffContent() {
 
   // Pedido cargado manualmente por recepción o cocina (presencial o telefónico) — la usan ambos
   // roles, por eso la vista a la que vuelve al terminar depende de cuál esté logueado
-  // (cocina no tiene una vista "dashboard" como recepción y admin).
-  const createManualOrder = async (input: { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string }) => {
+  // (cocina no tiene una vista "dashboard" como recepción y admin). discounts ya llega calculado
+  // desde ReceptionistCreateOrder (ver computeBundleDiscounts) — acá solo se agregan como ítems
+  // más del pedido, con precio negativo, mismo criterio que confirmOrder en AppCliente.tsx.
+  const createManualOrder = async (input: { customer: string; phone: string; items: CartItem[]; discounts: DiscountLine[]; type: OrderType; estimatedTime: string }) => {
     try {
       const newOrder = await api.ordersCreate({
         customer: input.customer,
         phone: input.phone,
-        items: input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes })),
+        items: [
+          ...input.items.map(i => ({ name: i.name, qty: i.qty, price: i.price, notes: i.notes })),
+          ...input.discounts.map(d => ({ name: d.name, qty: d.qty, price: d.price })),
+        ],
         type: input.type,
         estimatedTime: input.estimatedTime,
       });

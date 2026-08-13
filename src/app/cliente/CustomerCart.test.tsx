@@ -15,6 +15,9 @@ async function setup(isOpenNow: boolean | null = true) {
   vi.spyOn(api, "ordersSlots").mockResolvedValue([
     { time: "19:00", taken: 0, capacity: 4, tooSoon: false, available: true },
   ]);
+  // CustomerCart ahora consulta el catálogo (useProducts) para calcular descuentos por paquete
+  // (ver computeBundleDiscounts) — vacío acá porque ninguno de estos tests ejercita esa regla.
+  vi.spyOn(api, "productsList").mockResolvedValue([]);
   const onConfirm = vi.fn();
   const onUpdateCart = vi.fn();
   const onUpdateNotes = vi.fn();
@@ -50,7 +53,7 @@ describe("CustomerCart — validación obligatoria", () => {
     expect(confirmButton).toBeEnabled();
     await user.click(confirmButton);
 
-    expect(onConfirm).toHaveBeenCalledWith("María López", "1155667788", "19:00");
+    expect(onConfirm).toHaveBeenCalledWith("María López", "1155667788", "19:00", []);
   });
 
   it("queda disabled si el local está cerrado, aunque los 3 campos estén completos", async () => {

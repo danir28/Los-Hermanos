@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Search, CheckCircle, Clock, Plus, Minus, X, MessageSquare } from "lucide-react";
 import { ITEM_NOTES_MAX_LENGTH, type CartItem, type OrderType, type Product } from "../types";
+import { computeBundleDiscounts, type DiscountLine } from "../lib/bundleDiscounts";
 import { useProducts } from "../lib/useProducts";
 import { formatCurrency } from "../lib/format";
 import { onlyDigits } from "../lib/phone";
@@ -9,8 +10,10 @@ import { ConfirmDialog, ProductOptionsModal, SlotPicker } from "../components/sh
 // Datos del pedido que arma este formulario, para que AppStaff.tsx lo cree en el estado
 // compartido de orders. estimatedTime es obligatorio (todo pedido nace "Programado" con un
 // horario, ya no existe el fallback "Pendiente") — handleConfirm no deja llamar a onConfirm
-// sin horario elegido.
-type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; type: OrderType; estimatedTime: string };
+// sin horario elegido. discounts ya viene calculado (ver computeBundleDiscounts) para que
+// AppStaff.tsx solo tenga que agregarlo como ítems más del pedido, igual que hace AppCliente.tsx
+// del lado cliente — misma regla de negocio, sin duplicarla en dos archivos.
+type NewReceptionistOrder = { customer: string; phone: string; items: CartItem[]; discounts: DiscountLine[]; type: OrderType; estimatedTime: string };
 
 // Formulario de carga manual de pedidos por parte de recepción o cocina (pedidos telefónicos o
 // presenciales) — 100% agnóstico de rol, solo recibe onConfirm, por eso lo reusa también cocina.
@@ -66,7 +69,12 @@ export function ReceptionistCreateOrder({ onConfirm, isOpenNow = null }: { onCon
     prev.map(i => i.id === id ? { ...i, notes } : i)
   );
 
-  const total = orderCart.reduce((s, i) => s + i.price * i.qty, 0);
+  // Descuentos automáticos por paquete (ej. 6 empanadas sueltas = precio de media docena) —
+  // mismo cálculo y mismo criterio que usa CustomerCart del lado cliente (ver
+  // computeBundleDiscounts), para que recepción/cocina no tengan que armar la media docena a
+  // mano para que el cliente pague el precio correcto.
+  const discounts = computeBundleDiscounts(orderCart, products);
+  const total = orderCart.reduce((s, i) => s + i.price * i.qty, 0) + discounts.reduce((s, d) => s + d.price * d.qty, 0);
   const closed = isOpenNow === false;
 
   // Valida que haya productos, horario y datos del cliente cargados (las tres condiciones son
@@ -79,7 +87,7 @@ export function ReceptionistCreateOrder({ onConfirm, isOpenNow = null }: { onCon
     setConfirmed(true);
     setTimeout(() => {
       setConfirmed(false);
-      onConfirm({ customer: name.trim(), phone: phone.trim(), items: orderCart, type: orderType, estimatedTime: time });
+      onConfirm({ customer: name.trim(), phone: phone.trim(), items: orderCart, discounts, type: orderType, estimatedTime: time });
       setRefreshSignal(s => s + 1);
     }, 1200);
   };
@@ -227,6 +235,12 @@ export function ReceptionistCreateOrder({ onConfirm, isOpenNow = null }: { onCon
                         placeholder="Ej: sin tomate, sin mayonesa..."
                         className="w-full pl-7 pr-2.5 py-1.5 border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-primary/30 text-xs placeholder:text-muted-foreground" />
                     </div>
+                  </div>
+                ))}
+                {discounts.map(d => (
+                  <div key={d.name} className="flex justify-between items-center text-sm text-green-700">
+                    <span>{d.name}</span>
+                    <span className="font-mono font-semibold">{formatCurrency(d.price)}</span>
                   </div>
                 ))}
                 <div className="border-t border-border pt-2 mt-1 flex justify-between font-bold text-sm">

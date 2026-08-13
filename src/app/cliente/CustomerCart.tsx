@@ -1,19 +1,29 @@
 import { useState } from "react";
 import { ShoppingCart, Clock, Phone, User, Plus, Minus, Trash2, MessageSquare } from "lucide-react";
 import { ITEM_NOTES_MAX_LENGTH, type CartItem } from "../types";
+import { computeBundleDiscounts, type DiscountLine } from "../lib/bundleDiscounts";
 import { formatCurrency } from "../lib/format";
 import { onlyDigits } from "../lib/phone";
+import { useProducts } from "../lib/useProducts";
 import { SlotPicker } from "../components/shared";
 
 // Pantalla de carrito del cliente: edición de cantidades y confirmación del pedido con nombre,
 // teléfono y horario de retiro. isOpenNow llega calculado desde el backend (ver AppCliente.tsx);
 // mientras no cargó todavía (null) no se bloquea el botón, para no mostrar un falso "cerrado" en
-// el primer render.
-export function CustomerCart({ cart, onUpdateCart, onUpdateNotes, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: string, delta: number) => void; onUpdateNotes: (id: string, notes: string) => void; onConfirm: (name: string, phone: string, estimatedTime: string) => void; isOpenNow: boolean | null }) {
+// el primer render. onConfirm recibe además los descuentos por paquete ya calculados (ver
+// computeBundleDiscounts) para que AppCliente los sume tal cual al armar los ítems del pedido,
+// sin tener que recalcularlos ni volver a pedir el catálogo ahí.
+export function CustomerCart({ cart, onUpdateCart, onUpdateNotes, onConfirm, isOpenNow }: { cart: CartItem[]; onUpdateCart: (id: string, delta: number) => void; onUpdateNotes: (id: string, notes: string) => void; onConfirm: (name: string, phone: string, estimatedTime: string, discounts: DiscountLine[]) => void; isOpenNow: boolean | null }) {
+  const { products } = useProducts();
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [time, setTime] = useState<string | null>(null);
-  const total = cart.reduce((s, i) => s + i.price * i.qty, 0);
+  // Descuentos automáticos por paquete (ej. 6 empanadas sueltas = precio de media docena) —
+  // detectados a partir de lo que ya hay en el carrito, no de un producto-paquete elegido a
+  // propósito (ver computeBundleDiscounts). Puramente derivado: no es estado propio, se
+  // recalcula en cada render a partir de cart + products, ambos ya reactivos.
+  const discounts = computeBundleDiscounts(cart, products);
+  const total = cart.reduce((s, i) => s + i.price * i.qty, 0) + discounts.reduce((s, d) => s + d.price * d.qty, 0);
 
   if (cart.length === 0) {
     return (
@@ -74,6 +84,12 @@ export function CustomerCart({ cart, onUpdateCart, onUpdateNotes, onConfirm, isO
                   <span className="font-mono">{formatCurrency(item.price * item.qty)}</span>
                 </div>
               ))}
+              {discounts.map(d => (
+                <div key={d.name} className="flex justify-between text-sm text-green-700">
+                  <span>{d.name}</span>
+                  <span className="font-mono">{formatCurrency(d.price)}</span>
+                </div>
+              ))}
             </div>
             <div className="border-t border-border pt-3 flex justify-between items-center">
               <span className="font-bold">Total</span>
@@ -110,7 +126,7 @@ export function CustomerCart({ cart, onUpdateCart, onUpdateNotes, onConfirm, isO
               </div>
             )}
           </div>
-          <button onClick={() => name.trim() && phone.trim() && time && onConfirm(name.trim(), phone.trim(), time)}
+          <button onClick={() => name.trim() && phone.trim() && time && onConfirm(name.trim(), phone.trim(), time, discounts)}
             disabled={!name.trim() || !phone.trim() || !time || isOpenNow === false} data-testid="confirm-order"
             className="w-full bg-primary text-primary-foreground py-4 rounded-2xl font-bold text-lg hover:bg-primary/90 transition-all disabled:opacity-40 disabled:cursor-not-allowed shadow-lg">
             {isOpenNow === false ? "Local cerrado" : "Confirmar Pedido"}

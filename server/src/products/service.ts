@@ -59,10 +59,13 @@ async function loadOptionSourceProducts(
   return pending;
 }
 
-// Resuelve las opciones de UN grupo: si tiene sourceCategory, las calcula desde el catálogo
-// (priceDelta siempre 0 — ninguna opción dinámica cambia el precio, mismo criterio que ya tenían
-// a mano los sabores de pizza/empanada); si no, devuelve las filas ProductOption guardadas, igual
-// que siempre.
+// Resuelve las opciones de UN grupo. Si no tiene sourceCategory, devuelve las filas ProductOption
+// guardadas tal cual, igual que siempre (grupo manual). Si tiene sourceCategory (grupo dinámico),
+// las opciones se calculan desde el catálogo (nombre siempre en vivo, nunca el que quedó guardado
+// en un override) y cada una recibe el precio de su override puntual si tiene uno (`group.options`
+// ahora sí puede traer filas para un grupo dinámico — ver ProductOption.sourceProductId en
+// schema.prisma), o si no group.defaultPriceDelta (ej. $8500 para cualquier mitad de pizza que no
+// sea "Super", que si tiene su propio override a $10000).
 async function resolveGroupOptions(
   group: ProductOptionGroup & { options: ProductOption[] },
   cache: Map<string, Promise<{ id: number; name: string }[]>>,
@@ -70,8 +73,10 @@ async function resolveGroupOptions(
   if (!group.sourceCategory) {
     return group.options.map(opt => ({ id: opt.id, name: opt.name, priceDelta: Number(opt.priceDelta), sortOrder: opt.sortOrder }));
   }
+  const overrides = new Map(group.options.filter(o => o.sourceProductId !== null).map(o => [o.sourceProductId as number, Number(o.priceDelta)]));
+  const defaultPriceDelta = Number(group.defaultPriceDelta);
   const sourceProducts = await loadOptionSourceProducts(group.sourceCategory, cache);
-  return sourceProducts.map((p, sortOrder) => ({ id: p.id, name: p.name, priceDelta: 0, sortOrder }));
+  return sourceProducts.map((p, sortOrder) => ({ id: p.id, name: p.name, priceDelta: overrides.get(p.id) ?? defaultPriceDelta, sortOrder }));
 }
 
 async function toDTO(
@@ -92,6 +97,7 @@ async function toDTO(
       required: group.required,
       quantityTarget: group.quantityTarget,
       sourceCategory: group.sourceCategory,
+      defaultPriceDelta: Number(group.defaultPriceDelta),
       sortOrder: group.sortOrder,
       options: await resolveGroupOptions(group, cache),
     }))),
@@ -198,6 +204,7 @@ export async function replaceOptionGroups(productId: number, groups: CreateOptio
           required: group.required,
           quantityTarget: group.quantityTarget,
           sourceCategory: group.sourceCategory,
+          defaultPriceDelta: group.defaultPriceDelta,
           sortOrder: group.sortOrder,
           options: { create: group.options },
         },

@@ -159,9 +159,12 @@ productsRouter.patch("/:id/images/reorder", requireAuth, requireRole("admin"), a
 // válido y sus opciones anidadas. quantityTarget es obligatorio (>0) para selectionType
 // "quantity" y se ignora (se guarda null) para los otros dos tipos. sourceCategory (opcional) es
 // null/ausente para un grupo manual, o un string no vacío para un grupo dinámico (ver
-// ProductOptionGroup.sourceCategory en schema.prisma) — en ese caso `options` tiene que venir
-// vacío: las opciones se calculan solas, no tiene sentido que el admin tipee algo que se va a
-// ignorar al leer el producto.
+// ProductOptionGroup.sourceCategory en schema.prisma) — en ese caso `options` significa otra
+// cosa distinta: en vez de la lista completa de opciones (que se calcula sola desde el catálogo),
+// son overrides puntuales de precio para algún producto de esa categoría (ver
+// ProductOption.sourceProductId), cada uno con sourceProductId obligatorio; defaultPriceDelta es
+// el precio de cualquier opción SIN override. Para un grupo manual, defaultPriceDelta se ignora
+// (se guarda 0) y cada opción sigue siendo {name, priceDelta} sin sourceProductId.
 function parseOptionGroups(body: unknown): CreateOptionGroupInput[] | null {
   if (!Array.isArray(body)) return null;
   const groups: CreateOptionGroupInput[] = [];
@@ -178,7 +181,17 @@ function parseOptionGroups(body: unknown): CreateOptionGroupInput[] | null {
       if (typeof g.sourceCategory !== "string" || !g.sourceCategory.trim()) return null;
       sourceCategory = g.sourceCategory.trim();
     }
-    if (sourceCategory !== null && g.options.length > 0) return null;
+
+    let defaultPriceDelta = 0;
+    if (sourceCategory !== null) {
+      if (g.defaultPriceDelta === undefined) {
+        defaultPriceDelta = 0;
+      } else if (typeof g.defaultPriceDelta !== "number" || !Number.isFinite(g.defaultPriceDelta)) {
+        return null;
+      } else {
+        defaultPriceDelta = g.defaultPriceDelta;
+      }
+    }
 
     const options = [];
     for (const rawOpt of g.options) {
@@ -186,7 +199,14 @@ function parseOptionGroups(body: unknown): CreateOptionGroupInput[] | null {
       const o = rawOpt as Record<string, unknown>;
       if (typeof o.name !== "string" || !o.name.trim()) return null;
       if (typeof o.priceDelta !== "number" || !Number.isFinite(o.priceDelta)) return null;
-      options.push({ name: o.name.trim(), priceDelta: o.priceDelta, sortOrder: options.length });
+      if (sourceCategory !== null) {
+        // Override de un grupo dinámico: tiene que apuntar a un producto puntual.
+        if (!Number.isInteger(o.sourceProductId)) return null;
+        options.push({ name: o.name.trim(), priceDelta: o.priceDelta, sortOrder: options.length, sourceProductId: o.sourceProductId as number });
+      } else {
+        // Opción tipeada a mano de un grupo manual: nunca referencia otro producto.
+        options.push({ name: o.name.trim(), priceDelta: o.priceDelta, sortOrder: options.length, sourceProductId: null });
+      }
     }
 
     groups.push({
@@ -195,6 +215,7 @@ function parseOptionGroups(body: unknown): CreateOptionGroupInput[] | null {
       required: Boolean(g.required),
       quantityTarget: g.selectionType === "quantity" ? (g.quantityTarget as number) : null,
       sourceCategory,
+      defaultPriceDelta,
       sortOrder: groups.length,
       options,
     });
