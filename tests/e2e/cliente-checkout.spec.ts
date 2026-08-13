@@ -12,7 +12,7 @@ test("un cliente puede completar un pedido de punta a punta", async ({ page }) =
   await page.getByRole("button", { name: /Ver carrito/ }).click();
 
   await page.getByPlaceholder("Juan García").fill("Cliente E2E");
-  await page.getByPlaceholder("11-1234-5678").fill("1155550001");
+  await page.getByPlaceholder("1123456789").fill("1155550001");
 
   // El primer turno HABILITADO de la grilla (no importa cuál sea exactamente — depende de la
   // hora real en que corre la suite, ver la misma lógica en server/src/orders/service.test.ts).
