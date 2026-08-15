@@ -46,17 +46,19 @@
   --sidebar-border: oklch(92.2% 0 0deg);
   --sidebar-ring: oklch(70.8% 0 0deg);
 
-  /* Paleta de marca del sistema "Mostrador" (isotipo + wordmark, referencia de marca del
-     25/7/2026) — independiente de la paleta de la rotisería de arriba: esa es la marca del
-     cliente (usada en toda la UI de trabajo); esta es la marca del software en sí, reservada
-     para el isotipo/wordmark/watermark de src/app/components/shared/Mostrador*.tsx. Fija en
+  /* Paleta de marca del sistema "Retiralo" (isotipo + wordmark, referencia de marca del
+     25/7/2026, renombrado de "Mostrador" a "Retiralo" el 15/8/2026 al comprar el dominio
+     retiralo.com.ar — ver memoria de proyecto project_domain_retiralo_decided) —
+     independiente de la paleta de la rotisería de arriba: esa es la marca del cliente
+     (usada en toda la UI de trabajo); esta es la marca del software en sí, reservada
+     para el isotipo/wordmark/watermark de src/app/components/shared/Retiralo*.tsx. Fija en
      light y dark (no se redeclara en .dark) porque el isotipo debe verse igual sea cual sea
      el tema de la app — no es un color funcional del sistema de diseño, es un logo. */
-  --mostrador-carbon: #2B2622;
-  --mostrador-brasa: #B5471B;
-  --mostrador-brasa-oscuro: #7A2E10;
-  --mostrador-piedra: #6B655D;
-  --mostrador-hueso: #F1EDE3;
+  --retiralo-carbon: #2B2622;
+  --retiralo-brasa: #B5471B;
+  --retiralo-brasa-oscuro: #7A2E10;
+  --retiralo-piedra: #6B655D;
+  --retiralo-hueso: #F1EDE3;
 }
 
 .dark {
@@ -138,11 +140,11 @@
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
-  --color-mostrador-carbon: var(--mostrador-carbon);
-  --color-mostrador-brasa: var(--mostrador-brasa);
-  --color-mostrador-brasa-oscuro: var(--mostrador-brasa-oscuro);
-  --color-mostrador-piedra: var(--mostrador-piedra);
-  --color-mostrador-hueso: var(--mostrador-hueso);
+  --color-retiralo-carbon: var(--retiralo-carbon);
+  --color-retiralo-brasa: var(--retiralo-brasa);
+  --color-retiralo-brasa-oscuro: var(--retiralo-brasa-oscuro);
+  --color-retiralo-piedra: var(--retiralo-piedra);
+  --color-retiralo-hueso: var(--retiralo-hueso);
 }
 
 @layer utilities {
@@ -158,14 +160,14 @@
     font-family: Pacifico, cursive;
   }
 
-  /* Tipografías del kit de marca del sistema "Mostrador" (no confundir con .font-brand, que
-     es el isologo de la rotisería). Bricolage Grotesque para el nombre "Mostrador", IBM Plex
-     Sans para su tagline/watermark — ver src/app/components/shared/Mostrador*.tsx. */
-  .font-mostrador-display {
+  /* Tipografías del kit de marca del sistema "Retiralo" (no confundir con .font-brand, que
+     es el isologo de la rotisería). Bricolage Grotesque para el nombre "Retiralo", IBM Plex
+     Sans para su tagline/watermark — ver src/app/components/shared/Retiralo*.tsx. */
+  .font-retiralo-display {
     font-family: 'Bricolage Grotesque', sans-serif;
   }
 
-  .font-mostrador-body {
+  .font-retiralo-body {
     font-family: 'IBM Plex Sans', sans-serif;
   }
 
